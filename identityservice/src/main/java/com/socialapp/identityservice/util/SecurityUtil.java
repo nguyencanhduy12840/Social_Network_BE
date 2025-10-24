@@ -1,7 +1,11 @@
 package com.socialapp.identityservice.util;
 
+import com.nimbusds.jose.JOSEException;
 import com.nimbusds.jose.util.Base64;
+import com.socialapp.identityservice.dto.request.ValidateRequest;
 import com.socialapp.identityservice.dto.response.ResLoginDTO;
+import com.socialapp.identityservice.dto.response.ValidateResponse;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContext;
@@ -13,12 +17,14 @@ import org.springframework.stereotype.Service;
 
 import javax.crypto.SecretKey;
 import javax.crypto.spec.SecretKeySpec;
+import java.text.ParseException;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
+@Slf4j
 @Service
 public class SecurityUtil {
     private final JwtEncoder jwtEncoder;
@@ -74,7 +80,51 @@ public class SecurityUtil {
         JwsHeader jwsHeader = JwsHeader.with(JWT_ALGORITHM).build();
         return this.jwtEncoder.encode(JwtEncoderParameters.from(jwsHeader,claims)).getTokenValue();
     }
-    public Jwt checkValidRefreshToken(String token){
+
+    public ValidateResponse validateToken(ValidateRequest request) {
+        String token = request.getToken();
+        boolean isValid = true;
+
+        try {
+            // Kiểm tra token và thời hạn
+            verifyToken(token, true);
+        } catch (JOSEException | ParseException e) {
+            System.out.println(">>> Token validation failed: " + e.getMessage());
+            isValid = false;
+        } catch (Exception e) {
+            System.out.println(">>> Unexpected error validating token: " + e.getMessage());
+            isValid = false;
+        }
+        log.info(">>> Token: " + token + " isValid: " + isValid);
+        return ValidateResponse.builder().valid(isValid).build();
+    }
+
+    public void verifyToken(String token, boolean checkExpiry) throws ParseException, JOSEException {
+        NimbusJwtDecoder jwtDecoder = NimbusJwtDecoder.withSecretKey(getSecretKey())
+                .macAlgorithm(SecurityUtil.JWT_ALGORITHM)
+                .build();
+
+        try {
+            Jwt jwt = jwtDecoder.decode(token);
+
+            if (checkExpiry) {
+                Instant expiresAt = jwt.getExpiresAt();
+                Instant now = Instant.now();
+
+                if (expiresAt == null || expiresAt.isBefore(now)) {
+                    System.out.println(">>> Token expired at: " + expiresAt);
+                    throw new JOSEException("Token expired");
+                }
+            }
+
+            System.out.println(">>> Token is valid Expires at: " + jwt.getExpiresAt());
+        } catch (Exception e) {
+            System.out.println(">>> Token verification error: " + e.getMessage());
+            throw e;
+        }
+    }
+
+    public Jwt checkValidToken(String token){
         NimbusJwtDecoder jwtDecoder = NimbusJwtDecoder.withSecretKey(
                 getSecretKey()).macAlgorithm(SecurityUtil.JWT_ALGORITHM).build();
         try {
@@ -84,6 +134,7 @@ public class SecurityUtil {
             throw e;
         }
     }
+
     private SecretKey getSecretKey() {
         byte[] keyBytes = Base64.from(jwtKey).decode();
         return new SecretKeySpec(keyBytes, 0, keyBytes.length, JWT_ALGORITHM.getName());

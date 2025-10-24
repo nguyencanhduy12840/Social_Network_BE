@@ -35,6 +35,10 @@ public class FormatRestResponse implements ResponseBodyAdvice<Object> {
             return body;
         }
 
+        if (path.startsWith("/auth/validate")) {
+            return body;
+        }
+
         if (status >= 400) {
             return body;
         } else {

@@ -7,10 +7,6 @@ import lombok.*;
 @AllArgsConstructor
 @NoArgsConstructor
 @Builder
-public class ApiResponse<T> {
-    private int statusCode;
-    private String error;
-
-    private Object message;
-    private T data;
+public class ValidateResponse {
+    boolean valid;
 }
