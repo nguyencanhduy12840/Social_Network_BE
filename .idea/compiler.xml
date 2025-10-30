@@ -8,8 +8,9 @@
         <sourceTestOutputDir name="target/generated-test-sources/test-annotations" />
         <outputRelativeToContentRoot value="true" />
         <module name="discoveryservice" />
-        <module name="gatewayservice" />
         <module name="configservice" />
+        <module name="profileservice" />
+        <module name="gatewayservice" />
       </profile>
       <profile name="Annotation profile for identityservice" enabled="true">
         <sourceOutputDir name="target/generated-sources/annotations" />
@@ -28,6 +29,7 @@
       <module name="discoveryservice" options="-parameters" />
       <module name="gatewayservice" options="-parameters" />
       <module name="identityservice" options="-parameters" />
+      <module name="profileservice" options="-parameters" />
     </option>
   </component>
 </project>
