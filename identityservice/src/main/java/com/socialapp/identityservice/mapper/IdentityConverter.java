@@ -1,5 +1,6 @@
 package com.socialapp.identityservice.mapper;
 
+import com.socialapp.identityservice.dto.request.ProfileCreationRequest;
 import com.socialapp.identityservice.dto.request.ReqRegisterDTO;
 import com.socialapp.identityservice.dto.response.ResRegisterDTO;
 import com.socialapp.identityservice.entity.Identity;
@@ -22,5 +23,10 @@ public class IdentityConverter {
     public ResRegisterDTO convertToDto(Identity identity) {
         ResRegisterDTO resRegisterDTO = modelMapper.map(identity, ResRegisterDTO.class);
         return resRegisterDTO;
+    }
+
+    public ProfileCreationRequest convertToProfileCreationRequest(ReqRegisterDTO reqRegisterDTO) {
+        ProfileCreationRequest profileCreationRequest = modelMapper.map(reqRegisterDTO, ProfileCreationRequest.class);
+        return profileCreationRequest;
     }
 }
