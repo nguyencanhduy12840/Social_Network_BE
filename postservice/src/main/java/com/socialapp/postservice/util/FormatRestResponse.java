@@ -1,6 +1,5 @@
-package com.socialapp.identityservice.util;
+package com.socialapp.postservice.util;
 
-import com.socialapp.identityservice.dto.response.ApiResponse;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.core.MethodParameter;
 import org.springframework.core.io.Resource;
@@ -10,6 +9,8 @@ import org.springframework.http.server.ServerHttpResponse;
 import org.springframework.http.server.ServletServerHttpResponse;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.servlet.mvc.method.annotation.ResponseBodyAdvice;
+
+import com.socialapp.postservice.dto.response.ApiResponse;
 
 @ControllerAdvice
 public class FormatRestResponse implements ResponseBodyAdvice<Object> {
@@ -27,19 +28,7 @@ public class FormatRestResponse implements ResponseBodyAdvice<Object> {
         ApiResponse<Object> res = new ApiResponse<>();
         res.setStatusCode(status);
         // case error
-        if (body instanceof String) {
-            // Gói string vào ApiResponse rồi convert sang JSON string thủ công
-            ApiResponse<Object> res1 = new ApiResponse<>();
-            res1.setStatusCode(((ServletServerHttpResponse) response).getServletResponse().getStatus());
-            res1.setMessage("CALL API SUCCESS");
-            res1.setData(body);
-            try {
-                return new com.fasterxml.jackson.databind.ObjectMapper().writeValueAsString(res1);
-            } catch (Exception e) {
-                throw new RuntimeException(e);
-            }
-        }
-        if (body instanceof Resource) {
+        if (body instanceof String || body instanceof Resource) {
             return body;
         }
         String path = request.getURI().getPath();

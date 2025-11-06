@@ -94,4 +94,10 @@ public class IdentityController {
         return result;
     }
 
+    @PostMapping("/refresh-token")
+    public ResponseEntity<String> refreshToken(@CookieValue(name = "refresh_token") String refreshToken){
+        String response = this.securityUtil.refreshAccessToken(refreshToken);
+        return ResponseEntity.ok().body(response);
+    }
+
 }

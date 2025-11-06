@@ -1,11 +1,7 @@
-package com.socialapp.identityservice.util;
+package com.socialapp.postservice.util;
 
 import com.nimbusds.jose.JOSEException;
 import com.nimbusds.jose.util.Base64;
-import com.socialapp.identityservice.dto.request.ValidateRequest;
-import com.socialapp.identityservice.dto.response.ResLoginDTO;
-import com.socialapp.identityservice.dto.response.ValidateResponse;
-import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContext;
@@ -22,10 +18,8 @@ import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 
-@Slf4j
 @Service
 public class SecurityUtil {
     private final JwtEncoder jwtEncoder;
@@ -37,67 +31,6 @@ public class SecurityUtil {
     public static final MacAlgorithm JWT_ALGORITHM = MacAlgorithm.HS512;
     @Value("${social.jwt.base64-secret}")
     private String jwtKey;
-
-    @Value("${social.jwt.access-token-validity-in-seconds}")
-    private long accessTokenExpiration;
-
-    @Value("${social.jwt.refresh-token-validity-in-seconds}")
-    private long refreshTokenExpiration;
-
-    public String createAccessToken(String email, ResLoginDTO dto) {
-        ResLoginDTO userToken = new ResLoginDTO();
-        userToken.setId(dto.getId());
-        userToken.setEmail(dto.getEmail());
-        Instant now = Instant.now();
-        Instant validity = now.plus(this.accessTokenExpiration, ChronoUnit.SECONDS);
-        // @formatter:off
-        List<String> listAuthority = new ArrayList<>();
-        listAuthority.add("ROLE_USER");
-        JwtClaimsSet claims = JwtClaimsSet.builder()
-                .issuedAt(now)
-                .expiresAt(validity)
-                .subject(email)
-                .claim("user", userToken)
-                .claim("permission", listAuthority)
-                .build();
-        JwsHeader jwsHeader = JwsHeader.with(JWT_ALGORITHM).build();
-        return this.jwtEncoder.encode(JwtEncoderParameters.from(jwsHeader,claims)).getTokenValue();
-    }
-
-    public String createRefreshToken(String email, ResLoginDTO dto) {
-        ResLoginDTO userToken = new ResLoginDTO();
-        userToken.setId(dto.getId());
-        userToken.setEmail(dto.getEmail());
-        Instant now = Instant.now();
-        Instant validity = now.plus(this.refreshTokenExpiration, ChronoUnit.SECONDS);
-        // @formatter:off
-        JwtClaimsSet claims = JwtClaimsSet.builder()
-                .issuedAt(now)
-                .expiresAt(validity)
-                .subject(email)
-                .claim("user", userToken)
-                .build();
-        JwsHeader jwsHeader = JwsHeader.with(JWT_ALGORITHM).build();
-        return this.jwtEncoder.encode(JwtEncoderParameters.from(jwsHeader,claims)).getTokenValue();
-    }
-
-    public ValidateResponse validateToken(ValidateRequest request) {
-        String token = request.getToken();
-        boolean isValid = true;
-
-        try {
-            // Kiểm tra token và thời hạn
-            verifyToken(token, true);
-        } catch (JOSEException | ParseException e) {
-            System.out.println(">>> Token validation failed: " + e.getMessage());
-            isValid = false;
-        } catch (Exception e) {
-            System.out.println(">>> Unexpected error validating token: " + e.getMessage());
-            isValid = false;
-        }
-        log.info(">>> Token: " + token + " isValid: " + isValid);
-        return ValidateResponse.builder().valid(isValid).build();
-    }
 
     public void verifyToken(String token, boolean checkExpiry) throws ParseException, JOSEException {
         NimbusJwtDecoder jwtDecoder = NimbusJwtDecoder.withSecretKey(getSecretKey())
@@ -143,35 +76,6 @@ public class SecurityUtil {
         SecurityContext securityContext = SecurityContextHolder.getContext();
         return Optional.ofNullable(extractPrincipal(securityContext.getAuthentication()));
     }
-
-    public String refreshAccessToken(String refreshToken) {
-    try {
-        Jwt jwt = checkValidToken(refreshToken);
-        Instant expiresAt = jwt.getExpiresAt();
-
-        if (expiresAt == null || expiresAt.isBefore(Instant.now())) {
-            log.error("Refresh token expired");
-            throw new RuntimeException("Refresh token expired");
-        }
-
-        String email = jwt.getSubject();
-        Object userClaim = jwt.getClaims().get("user");
-
-        ResLoginDTO user = new ResLoginDTO();
-        if (userClaim instanceof Map<?, ?> userMap) {
-            user.setId((String) userMap.get("id"));
-            user.setEmail((String) userMap.get("email"));
-        }
-
-        String newAccessToken = createAccessToken(email, user);
-
-        return newAccessToken;
-
-    } catch (Exception e) {
-        log.error("Error refreshing access token: {}", e.getMessage());
-        throw new RuntimeException("Error refreshing access token", e);
-    }
-}
 
     private static String extractPrincipal(Authentication authentication) {
         if (authentication == null) {

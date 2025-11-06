@@ -1,4 +1,4 @@
-package com.socialapp.profileservice;
+package com.socialapp.postservice;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
@@ -6,10 +6,10 @@ import org.springframework.cloud.client.discovery.EnableDiscoveryClient;
 
 @SpringBootApplication
 @EnableDiscoveryClient
-public class ProfileserviceApplication {
+public class PostserviceApplication {
 
 	public static void main(String[] args) {
-		SpringApplication.run(ProfileserviceApplication.class, args);
+		SpringApplication.run(PostserviceApplication.class, args);
 	}
 
 }
