@@ -24,7 +24,7 @@ public class PostService {
         Post post = Post.builder().
         authorId(createPostRequest.getUserId())
         .content(createPostRequest.getContent())
-        .media(createPostRequest.getMediaUrls())
+        .media(createPostRequest.getMedia())
         .groupId(createPostRequest.getGroupId())
         .privacy(createPostRequest.getPrivacy())
         .commentsCount(0)

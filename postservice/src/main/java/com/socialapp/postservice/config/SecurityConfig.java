@@ -37,7 +37,7 @@ public class SecurityConfig {
     public SecurityFilterChain filterChain(HttpSecurity http
     ) throws Exception {
         String[] whiteList = {
-               
+               "/create-post"
         };
         http
                 .csrf(c -> c.disable())
@@ -45,7 +45,7 @@ public class SecurityConfig {
                 .authorizeHttpRequests(
                         authz -> authz
                                 .requestMatchers(whiteList).permitAll()
-                                .anyRequest().authenticated())
+                                )
                 .oauth2ResourceServer((oauth2) -> oauth2.jwt(Customizer.withDefaults()))
 
                 .exceptionHandling(

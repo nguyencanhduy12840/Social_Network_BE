@@ -16,7 +16,7 @@ import lombok.Setter;
 public class CreatePostRequest {
     private String userId;
     private String content;
-    private List<String> mediaUrls;
+    private List<String> media;
     private String groupId;
     private String privacy;
 }

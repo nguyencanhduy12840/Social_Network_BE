@@ -3,6 +3,7 @@ package com.socialapp.postservice.controller;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.socialapp.postservice.dto.request.CreatePostRequest;
@@ -17,7 +18,7 @@ public class PostController {
         this.postService = postService;
     }
 
-    @PostMapping
+    @PostMapping("/create-post")
     public ResponseEntity<CreatePostResponse> createPost(
             @RequestBody CreatePostRequest request) {
                 CreatePostResponse post = postService.createPost(request);
