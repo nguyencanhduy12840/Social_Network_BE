@@ -3,10 +3,12 @@ package com.socialapp.postservice.service;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
+import com.socialapp.postservice.dto.request.LikePostRequest;
 import com.socialapp.postservice.dto.response.CreatePostResponse;
 import com.socialapp.postservice.entity.Post;
 import com.socialapp.postservice.mapper.PostConverter;
@@ -52,7 +54,6 @@ public class PostService {
                 .content(content)
                 .media(mediaUrls)
                 .createdAt(Instant.now())
-                .updatedAt(Instant.now())
                 .likes(new ArrayList<>())
                 .commentsCount(0)
                 .build();
@@ -60,5 +61,21 @@ public class PostService {
         Post savedPost = postRepository.save(post);
 
         return postConverter.convertToCreatePostResponse(savedPost);
+    }
+
+    public Post handleLikePost(LikePostRequest likePostRequest) {
+        Optional<Post> post = postRepository.findById(likePostRequest.getPostId());
+        if(post.isPresent()){
+            Post existingPost = post.get();
+            List<String> likes = existingPost.getLikes();
+            if (likes.contains(likePostRequest.getUserId())) {
+                likes.remove(likePostRequest.getUserId());
+            } else {
+                likes.add(likePostRequest.getUserId());
+            }
+            existingPost.setLikes(likes);
+            return postRepository.save(existingPost);
+        }
+        return null;
     }
 }

@@ -3,15 +3,19 @@ package com.socialapp.postservice.controller;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
+
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RequestPart;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
-import com.socialapp.postservice.dto.request.CreatePostRequest;
+
+import com.socialapp.postservice.dto.request.LikePostRequest;
 import com.socialapp.postservice.dto.response.CreatePostResponse;
+import com.socialapp.postservice.entity.Post;
 import com.socialapp.postservice.service.PostService;
+
+import jakarta.ws.rs.NotFoundException;
 
 @RestController
 public class PostController {
@@ -31,4 +35,13 @@ public class PostController {
                 CreatePostResponse post = postService.createPost(userId, content, groupId, privacy, mediaFiles);
                 return ResponseEntity.ok(post);
             }
+    
+    @PostMapping("/like-post")
+    public ResponseEntity<Post> likePost(@RequestBody LikePostRequest likePostRequest) {
+        Post updatedPost = postService.handleLikePost(likePostRequest);
+        if (updatedPost == null) {
+            throw new NotFoundException("Post not found");
+        }
+        return ResponseEntity.ok(updatedPost);
+    }
 }
