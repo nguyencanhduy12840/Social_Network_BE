@@ -2,6 +2,7 @@ package com.socialapp.identityservice.util;
 
 import com.nimbusds.jose.JOSEException;
 import com.nimbusds.jose.util.Base64;
+import com.socialapp.identityservice.dto.request.RefreshTokenRequest;
 import com.socialapp.identityservice.dto.request.ValidateRequest;
 import com.socialapp.identityservice.dto.response.ResLoginDTO;
 import com.socialapp.identityservice.dto.response.ValidateResponse;
@@ -144,9 +145,9 @@ public class SecurityUtil {
         return Optional.ofNullable(extractPrincipal(securityContext.getAuthentication()));
     }
 
-    public String refreshAccessToken(String refreshToken) {
+    public String refreshAccessToken(RefreshTokenRequest refreshToken) {
     try {
-        Jwt jwt = checkValidToken(refreshToken);
+        Jwt jwt = checkValidToken(refreshToken.getRefreshToken());
         Instant expiresAt = jwt.getExpiresAt();
 
         if (expiresAt == null || expiresAt.isBefore(Instant.now())) {

@@ -1,9 +1,9 @@
 package com.socialapp.identityservice.controller;
 
+import com.socialapp.identityservice.dto.request.RefreshTokenRequest;
 import com.socialapp.identityservice.dto.request.ReqLoginDTO;
 import com.socialapp.identityservice.dto.request.ReqRegisterDTO;
 import com.socialapp.identityservice.dto.request.ValidateRequest;
-import com.socialapp.identityservice.dto.response.ApiResponse;
 import com.socialapp.identityservice.dto.response.ResLoginDTO;
 import com.socialapp.identityservice.dto.response.ResRegisterDTO;
 import com.socialapp.identityservice.dto.response.ValidateResponse;
@@ -95,7 +95,7 @@ public class IdentityController {
     }
 
     @PostMapping("/refresh-token")
-    public ResponseEntity<String> refreshToken(@CookieValue(name = "refresh_token") String refreshToken){
+    public ResponseEntity<String> refreshToken(@RequestBody RefreshTokenRequest refreshToken){
         String response = this.securityUtil.refreshAccessToken(refreshToken);
         return ResponseEntity.ok().body(response);
     }
