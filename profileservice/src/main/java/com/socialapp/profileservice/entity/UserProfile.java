@@ -6,9 +6,12 @@ import org.springframework.data.neo4j.core.schema.GeneratedValue;
 import org.springframework.data.neo4j.core.schema.Id;
 import org.springframework.data.neo4j.core.schema.Node;
 import org.springframework.data.neo4j.core.schema.Property;
+import org.springframework.data.neo4j.core.schema.Relationship;
+import org.springframework.data.neo4j.core.schema.Relationship.Direction;
 import org.springframework.data.neo4j.core.support.UUIDStringGenerator;
 
 import java.time.LocalDate;
+import java.util.Set;
 
 @Getter
 @Setter
@@ -18,6 +21,7 @@ import java.time.LocalDate;
 @FieldDefaults(level = AccessLevel.PRIVATE)
 @Node("user_profile")
 public class UserProfile {
+
     @Id
     @GeneratedValue(generatorClass = UUIDStringGenerator.class)
     String id;
@@ -26,8 +30,12 @@ public class UserProfile {
     String userId;
 
     String email;
-
     String firstName;
     String lastName;
+    String avatarUrl;
+    String gender;
     LocalDate dob;
+
+    @Relationship(type = "FRIEND_WITH", direction = Direction.OUTGOING)
+    Set<Friendship> friendships;
 }

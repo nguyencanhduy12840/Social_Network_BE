@@ -29,24 +29,29 @@ public class SecurityConfig {
     @Value("${social.jwt.base64-secret}")
     private String jwtKey;
 
+    private final CustomAccessDeniedHandler customAccessDeniedHandler;
+    public SecurityConfig(CustomAccessDeniedHandler customAccessDeniedHandler) {
+        this.customAccessDeniedHandler = customAccessDeniedHandler;
+    }
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http
     ) throws Exception {
         String[] whiteList = {
-                "/internal/users"
+                "/internal/users",
+                "/users/**",
+                "/friendships/**"
         };
         http
                 .csrf(c -> c.disable())
                 .cors(Customizer.withDefaults())
                 .authorizeHttpRequests(
                         authz -> authz
-                                .requestMatchers(whiteList).permitAll()
-                                .anyRequest().authenticated())
+                                .requestMatchers(whiteList).permitAll())
                 .oauth2ResourceServer((oauth2) -> oauth2.jwt(Customizer.withDefaults()))
 
                 .exceptionHandling(
                         exceptions -> exceptions
-                                .accessDeniedHandler(new BearerTokenAccessDeniedHandler())) // 403
+                                .accessDeniedHandler(customAccessDeniedHandler)) // 403
                 .formLogin(f -> f.disable())
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS));
         return http.build();

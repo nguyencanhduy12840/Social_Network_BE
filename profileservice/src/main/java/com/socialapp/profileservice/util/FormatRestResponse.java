@@ -28,7 +28,19 @@ public class FormatRestResponse implements ResponseBodyAdvice<Object> {
         ApiResponse<Object> res = new ApiResponse<>();
         res.setStatusCode(status);
         // case error
-        if (body instanceof String || body instanceof Resource) {
+        if (body instanceof String) {
+            // Gói string vào ApiResponse rồi convert sang JSON string thủ công
+            ApiResponse<Object> res1 = new ApiResponse<>();
+            res1.setStatusCode(((ServletServerHttpResponse) response).getServletResponse().getStatus());
+            res1.setMessage("CALL API SUCCESS");
+            res1.setData(body);
+            try {
+                return new com.fasterxml.jackson.databind.ObjectMapper().writeValueAsString(res1);
+            } catch (Exception e) {
+                throw new RuntimeException(e);
+            }
+        }
+        if (body instanceof Resource) {
             return body;
         }
         String path = request.getURI().getPath();
