@@ -13,7 +13,5 @@ import java.time.LocalDate;
 public class ProfileCreationRequest {
     String userId;
     String email;
-    String firstName;
-    String lastName;
-    LocalDate dob;
+    String username;
 }
