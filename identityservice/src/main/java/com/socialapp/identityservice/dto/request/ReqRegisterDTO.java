@@ -19,9 +19,5 @@ public class ReqRegisterDTO {
     @NotBlank(message = "Password is mandatory")
     private String password;
 
-    private String firstName;
-
-    private String lastName;
-
-    LocalDate dob;
+    private String username;
 }
