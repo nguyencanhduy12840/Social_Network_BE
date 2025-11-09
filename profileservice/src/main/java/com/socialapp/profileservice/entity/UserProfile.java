@@ -32,6 +32,8 @@ public class UserProfile {
     String email;
     String firstName;
     String lastName;
+
+    @Property("username")
     String username;
     String avatarUrl;
     String gender;

@@ -36,7 +36,8 @@
       "mainClass": "com.socialapp.gatewayservice.GatewayserviceApplication",
       "projectName": "gatewayservice",
       "args": "",
-      "envFile": "${workspaceFolder}/.env"
+      "envFile": "${workspaceFolder}/.env",
+      "vmArgs": " -Dcom.sun.management.jmxremote -Dcom.sun.management.jmxremote.port=59785 -Dcom.sun.management.jmxremote.authenticate=false -Dcom.sun.management.jmxremote.ssl=false -Dspring.jmx.enabled=true -Djava.rmi.server.hostname=localhost -Dspring.application.admin.enabled=true -Dspring.boot.project.name=gatewayservice"
     },
     {
       "type": "java",
@@ -65,6 +66,16 @@
       "cwd": "${workspaceFolder}",
       "mainClass": "com.socialapp.postservice.PostserviceApplication",
       "projectName": "postservice",
+      "args": "",
+      "envFile": "${workspaceFolder}/.env"
+    },
+    {
+      "type": "java",
+      "name": "Spring Boot-NotificationserviceApplication<notificationservice>",
+      "request": "launch",
+      "cwd": "${workspaceFolder}",
+      "mainClass": "com.socialapp.notificationservice.NotificationserviceApplication",
+      "projectName": "notificationservice",
       "args": "",
       "envFile": "${workspaceFolder}/.env"
     }
