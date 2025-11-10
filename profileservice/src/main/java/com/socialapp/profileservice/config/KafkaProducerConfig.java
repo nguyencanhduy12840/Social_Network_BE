@@ -12,13 +12,13 @@ import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.kafka.core.ProducerFactory;
 import org.springframework.kafka.support.serializer.JsonSerializer;
 
-import com.socialapp.profileservice.dto.request.FriendshipEventDTO;
+import com.socialapp.profileservice.dto.request.BaseEvent;
 
 @Configuration
 public class KafkaProducerConfig {
 
     @Bean
-    public ProducerFactory<String, FriendshipEventDTO> producerFactory() {
+    public ProducerFactory<String, BaseEvent> producerFactory() {
         Map<String, Object> configProps = new HashMap<>();
         configProps.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, "localhost:9092"); // địa chỉ Kafka
         configProps.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, StringSerializer.class);
@@ -27,7 +27,7 @@ public class KafkaProducerConfig {
     }
 
     @Bean
-    public KafkaTemplate<String, FriendshipEventDTO> kafkaTemplate() {
+    public KafkaTemplate<String, BaseEvent> kafkaTemplate() {
         return new KafkaTemplate<>(producerFactory());
     }
 }

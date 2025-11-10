@@ -1,7 +1,6 @@
 package com.socialapp.profileservice.service;
 
 import java.time.Instant;
-import java.time.LocalDate;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
@@ -9,6 +8,7 @@ import java.util.Optional;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Service;
 
+import com.socialapp.profileservice.dto.request.BaseEvent;
 import com.socialapp.profileservice.dto.request.FriendActionRequest;
 import com.socialapp.profileservice.dto.request.FriendshipEventDTO;
 import com.socialapp.profileservice.entity.Friendship;
@@ -22,11 +22,11 @@ import jakarta.transaction.Transactional;
 @Service
 public class FriendshipService {
      private final UserProfileRepository userProfileRepository;
-    private final KafkaTemplate<String, FriendshipEventDTO> kafkaTemplate;
+    private final KafkaTemplate<String, BaseEvent> kafkaTemplate;
 
-    private final String FRIENDSHIP_TOPIC = "friendship-events";
+    private final String NOTIFICATION_TOPIC = "notification-events";
 
-    public FriendshipService(UserProfileRepository userProfileRepository, KafkaTemplate<String, FriendshipEventDTO> kafkaTemplate) {
+    public FriendshipService(UserProfileRepository userProfileRepository, KafkaTemplate<String, BaseEvent> kafkaTemplate) {
         this.userProfileRepository = userProfileRepository;
         this.kafkaTemplate = kafkaTemplate;
     }
@@ -62,13 +62,20 @@ public class FriendshipService {
         userProfileRepository.save(sender);
 
         // Push Kafka event
+        
         FriendshipEventDTO event = FriendshipEventDTO.builder()
                 .type("FRIEND_REQUEST")
                 .senderId(senderId)
                 .receiverId(receiverId)
                 .message("User " + senderId + " sent you a friend request")
                 .build();
-        kafkaTemplate.send(FRIENDSHIP_TOPIC, event);
+                
+        BaseEvent wrapper = BaseEvent.builder()
+        .eventType("FRIEND_REQUEST")
+        .sourceService("ProfileService")
+        .payload(event)
+        .build();
+        kafkaTemplate.send(NOTIFICATION_TOPIC, wrapper);
 
         return "Friend request sent";
     }
@@ -102,7 +109,13 @@ public class FriendshipService {
                 .receiverId(receiverId)
                 .message("User " + receiverId + " accepted your friend request")
                 .build();
-        kafkaTemplate.send(FRIENDSHIP_TOPIC, event);
+        
+        BaseEvent wrapper = BaseEvent.builder()
+        .eventType("FRIEND_REQUEST_ACCEPTED")
+        .sourceService("ProfileService")
+        .payload(event)
+        .build();
+        kafkaTemplate.send(NOTIFICATION_TOPIC, wrapper);
 
         return "Friend request accepted";
     }
@@ -133,7 +146,12 @@ public class FriendshipService {
                 .receiverId(receiverId)
                 .message("User " + receiverId + " rejected your friend request")
                 .build();
-        kafkaTemplate.send(FRIENDSHIP_TOPIC, event);
+        BaseEvent wrapper = BaseEvent.builder()
+        .eventType("FRIEND_REQUEST_REJECTED")
+        .sourceService("ProfileService")
+        .payload(event)
+        .build();
+        kafkaTemplate.send(NOTIFICATION_TOPIC, wrapper);
 
         return "Friend request rejected";
     }
@@ -163,7 +181,12 @@ public class FriendshipService {
                 .receiverId(receiverId)
                 .message("User " + senderId + " cancelled the friend request")
                 .build();
-        kafkaTemplate.send(FRIENDSHIP_TOPIC, event);
+        BaseEvent wrapper = BaseEvent.builder()
+        .eventType("FRIEND_REQUEST_CANCELLED")
+        .sourceService("ProfileService")
+        .payload(event)
+        .build();
+        kafkaTemplate.send(NOTIFICATION_TOPIC, wrapper);
 
         return "Friend request cancelled";
     }

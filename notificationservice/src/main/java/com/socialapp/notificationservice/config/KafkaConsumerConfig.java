@@ -1,6 +1,6 @@
 package com.socialapp.notificationservice.config;
 
-import com.socialapp.notificationservice.dto.FriendshipEventDTO;
+import com.socialapp.notificationservice.dto.BaseEvent;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.kafka.common.serialization.StringDeserializer;
 import org.springframework.context.annotation.Bean;
@@ -19,27 +19,23 @@ import java.util.Map;
 public class KafkaConsumerConfig {
 
     @Bean
-    public ConcurrentKafkaListenerContainerFactory<String, FriendshipEventDTO> friendshipEventKafkaListenerContainerFactory() {
+    public ConcurrentKafkaListenerContainerFactory<String, BaseEvent> kafkaListenerContainerFactory() {
         Map<String, Object> props = new HashMap<>();
         props.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, "localhost:9092");
         props.put(ConsumerConfig.GROUP_ID_CONFIG, "notification-group");
         props.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest");
 
-        // JsonDeserializer cấu hình chuẩn cho DTO
-        JsonDeserializer<FriendshipEventDTO> deserializer = new JsonDeserializer<>(FriendshipEventDTO.class);
+        JsonDeserializer<BaseEvent> deserializer = new JsonDeserializer<>(BaseEvent.class);
         deserializer.addTrustedPackages("*");
-        deserializer.setRemoveTypeHeaders(false);
-        deserializer.setUseTypeMapperForKey(false);
-        deserializer.ignoreTypeHeaders(); // ignore header nếu producer không gửi __TypeId__
+        deserializer.ignoreTypeHeaders();
 
-        DefaultKafkaConsumerFactory<String, FriendshipEventDTO> consumerFactory =
+        DefaultKafkaConsumerFactory<String, BaseEvent> consumerFactory =
                 new DefaultKafkaConsumerFactory<>(props, new StringDeserializer(), deserializer);
 
-        ConcurrentKafkaListenerContainerFactory<String, FriendshipEventDTO> factory =
+        ConcurrentKafkaListenerContainerFactory<String, BaseEvent> factory =
                 new ConcurrentKafkaListenerContainerFactory<>();
         factory.setConsumerFactory(consumerFactory);
 
-        // Error handler để log và skip lỗi
         factory.setCommonErrorHandler(new DefaultErrorHandler(
                 (record, exception) -> {
                     System.err.println("Skipping bad record: " + record.value());
