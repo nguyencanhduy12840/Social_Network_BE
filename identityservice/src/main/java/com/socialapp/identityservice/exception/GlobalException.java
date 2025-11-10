@@ -26,6 +26,24 @@ public class GlobalException {
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(res);
     }
 
+    @ExceptionHandler(value = GoogleAuthException.class)
+    public ResponseEntity<ApiResponse<Object>> handleGoogleAuthException(GoogleAuthException ex) {
+        ApiResponse<Object> res = new ApiResponse<>();
+        res.setStatusCode(HttpStatus.UNAUTHORIZED.value());
+        res.setError("Google authentication failed");
+        res.setMessage(ex.getMessage());
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(res);
+    }
+
+    @ExceptionHandler(value = IllegalArgumentException.class)
+    public ResponseEntity<ApiResponse<Object>> handleIllegalArgumentException(IllegalArgumentException ex) {
+        ApiResponse<Object> res = new ApiResponse<>();
+        res.setStatusCode(HttpStatus.BAD_REQUEST.value());
+        res.setError("Invalid request");
+        res.setMessage(ex.getMessage());
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(res);
+    }
+
     @ExceptionHandler(value = MethodArgumentNotValidException.class)
     public ResponseEntity<ApiResponse<Object>> validationError(MethodArgumentNotValidException Exception) {
         BindingResult result = Exception.getBindingResult();
