@@ -42,7 +42,7 @@ public class SecurityConfig {
 //                                           CustomAuthenticationEntryPoint customAuthenticationEntryPoint
     ) throws Exception {
         String[] whiteList = {
-                "/auth/register", "/auth/login"
+                "/auth/register", "/auth/login", "/auth/google"
         };
         http
                 .csrf(c -> c.disable())
