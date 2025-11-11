@@ -39,7 +39,8 @@ public class SecurityConfig {
         String[] whiteList = {
                 "/internal/users",
                 "/users/**",
-                "/friendships/**"
+                "/friendships/**",
+                "/internal/friendships/**",
         };
         http
                 .csrf(c -> c.disable())

@@ -41,7 +41,8 @@ public class NotificationService {
         messagingTemplate.convertAndSend("/topic/notifications/" + dto.getReceiverId(), notification);
     }
 
-    public void processPostEvent(PostEventDTO eventDTO){
+    public void handlePostEvent(BaseEvent event){
+        PostEventDTO eventDTO = modelMapper.map(event.getPayload(), PostEventDTO.class);
         Notification notification = Notification.builder()
                 .senderId(eventDTO.getAuthorId())
                 .receiverId(eventDTO.getReceiverId())
@@ -54,6 +55,6 @@ public class NotificationService {
         notificationRepository.save(notification);
 
         // Push realtime
-        messagingTemplate.convertAndSend("/topic/posts/" + eventDTO.getReceiverId(), notification);
+        messagingTemplate.convertAndSend("/topic/notifications/" + eventDTO.getReceiverId(), notification);
     }
 }

@@ -5,14 +5,19 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
+import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
+import com.socialapp.postservice.dto.request.BaseEvent;
 import com.socialapp.postservice.dto.request.LikePostRequest;
+import com.socialapp.postservice.dto.request.PostEvent;
 import com.socialapp.postservice.dto.response.CreatePostResponse;
+import com.socialapp.postservice.dto.response.UserProfile;
 import com.socialapp.postservice.entity.Post;
 import com.socialapp.postservice.mapper.PostConverter;
 import com.socialapp.postservice.repository.PostRepository;
+import com.socialapp.postservice.repository.httpclient.ProfileClient;
 
 @Service
 public class PostService {
@@ -21,10 +26,17 @@ public class PostService {
     private final PostConverter postConverter;
     private final CloudinaryService cloudinaryService;
 
-    public PostService(PostRepository postRepository, PostConverter postConverter, CloudinaryService cloudinaryService) {
+    private final KafkaTemplate<String, BaseEvent> kafkaTemplate;
+    private final ProfileClient profileClient;
+
+    private final String NOTIFICATION_TOPIC = "notification-events";
+
+    public PostService(PostRepository postRepository, PostConverter postConverter, CloudinaryService cloudinaryService, KafkaTemplate<String, BaseEvent> kafkaTemplate, ProfileClient profileClient) {
         this.postRepository = postRepository;
         this.postConverter = postConverter;
         this.cloudinaryService = cloudinaryService;
+        this.kafkaTemplate = kafkaTemplate;
+        this.profileClient = profileClient;
     }
 
     public CreatePostResponse createPost(String userId, String content, String groupId, String privacy, MultipartFile[] mediaFiles) {
@@ -52,14 +64,35 @@ public class PostService {
                 .groupId(groupId)
                 .type(type)
                 .content(content)
+                .privacy(privacy)
                 .media(mediaUrls)
                 .createdAt(Instant.now())
                 .likes(new ArrayList<>())
                 .commentsCount(0)
                 .build();
+        
 
         Post savedPost = postRepository.save(post);
 
+        UserProfile friends = profileClient.getFriends(userId);
+        friends.getData().parallelStream().forEach(friend-> {
+            PostEvent event = PostEvent.builder()
+                            .postId(savedPost.getId())
+                            .authorId(userId)
+                            .content(content)
+                            .eventType("NEW_POST")
+                            .receiverId(friend.getUserId())
+                            .build();
+
+                        BaseEvent baseEvent = BaseEvent.builder()
+                            .eventType("NEW_POST")
+                            .sourceService("PostService")
+                            .payload(event)
+                            .build();
+
+                    kafkaTemplate.send(NOTIFICATION_TOPIC, baseEvent);
+        });
+        
         return postConverter.convertToCreatePostResponse(savedPost);
     }
 

@@ -29,7 +29,7 @@ public class Post {
     Instant createdAt;
     Instant updatedAt;
 
-    private String privacy;
+    String privacy;
 
     List<String> likes;
     Integer commentsCount;

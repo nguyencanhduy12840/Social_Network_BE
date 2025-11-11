@@ -15,8 +15,8 @@ public interface UserProfileRepository extends Neo4jRepository<UserProfile, Stri
     Optional<UserProfile> findByUserId(String userId);
 
      @Query("""
-        MATCH (u:user_profile {userId: $userId})-[:FRIEND_WITH]-(f:user_profile)
-        WHERE EXISTS((u)-[r:FRIEND_WITH]-(f)) AND r.status = 'ACCEPTED'
+        MATCH (u:user_profile {userId: $userId})-[r:FRIEND_WITH]-(f:user_profile)
+        WHERE r.status = 'ACCEPTED'
         RETURN f
         SKIP $skip LIMIT $limit
     """)
