@@ -197,4 +197,16 @@ public class FriendshipService {
         long skip = (long) page * size;
         return userProfileRepository.findFriendsByUserId(userId, skip, size);
     }
+
+    @Transactional
+    public List<UserProfile> getSentRequests(String userId, int page, int size) {
+        long skip = (long) page * size;
+        return userProfileRepository.findSentFriendRequests(userId, skip, size);
+    }
+
+    @Transactional
+        public List<UserProfile> getPendingRequests(String userId, int page, int size) {
+                long skip = (long) page * size;
+                return userProfileRepository.findReceivedFriendRequests(userId, skip, size);
+        }
 }

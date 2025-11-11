@@ -21,4 +21,22 @@ public interface UserProfileRepository extends Neo4jRepository<UserProfile, Stri
         SKIP $skip LIMIT $limit
     """)
     List<UserProfile> findFriendsByUserId(String userId, long skip, long limit);
+
+    // Lời mời đã gửi
+    @Query("""
+        MATCH (me:user_profile {userId: $userId})-[r:FRIEND_WITH]->(receiver:user_profile)
+        WHERE r.status = 'PENDING'
+        RETURN receiver
+        SKIP $skip LIMIT $limit
+    """)
+    List<UserProfile> findSentFriendRequests(String userId, long skip, long limit);
+
+    // Lời mời đã nhận
+    @Query("""
+        MATCH (sender:user_profile)-[r:FRIEND_WITH]->(me:user_profile {userId: $userId})
+        WHERE r.status = 'PENDING'
+        RETURN sender
+        SKIP $skip LIMIT $limit
+        """)
+    List<UserProfile> findReceivedFriendRequests(String userId, long skip, long limit);
 }

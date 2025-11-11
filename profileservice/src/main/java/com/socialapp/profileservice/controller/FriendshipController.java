@@ -27,9 +27,27 @@ public class FriendshipController {
     public List<UserProfile> getFriends(
             @PathVariable String userId,
             @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "20") int size
+            @RequestParam(defaultValue = "100") int size
     ) {
         return friendService.getFriends(userId, page, size);
+    }
+
+    @GetMapping("/pending/{userId}")
+    public List<UserProfile> getPendingRequests(
+            @PathVariable String userId,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "100") int size
+    ) {
+        return friendService.getPendingRequests(userId, page, size);
+    }
+
+    @GetMapping("/sent/{userId}")
+    public List<UserProfile> getSentRequests(
+            @PathVariable String userId,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "100") int size
+    ) {
+        return friendService.getSentRequests(userId, page, size);
     }
 
     @PostMapping("/request")
