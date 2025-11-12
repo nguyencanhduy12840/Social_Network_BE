@@ -1,9 +1,8 @@
 package com.socialapp.profileservice.service;
 
-import java.time.Instant;
-import java.util.HashSet;
+
 import java.util.List;
-import java.util.Optional;
+
 
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Service;
@@ -11,11 +10,11 @@ import org.springframework.stereotype.Service;
 import com.socialapp.profileservice.dto.request.BaseEvent;
 import com.socialapp.profileservice.dto.request.FriendActionRequest;
 import com.socialapp.profileservice.dto.request.FriendshipEventDTO;
-import com.socialapp.profileservice.entity.Friendship;
+
 import com.socialapp.profileservice.entity.UserProfile;
-import com.socialapp.profileservice.exception.ExistException;
+
 import com.socialapp.profileservice.repository.UserProfileRepository;
-import com.socialapp.profileservice.util.FriendshipStatus;
+
 
 import jakarta.transaction.Transactional;
 
@@ -36,45 +35,33 @@ public class FriendshipService {
         String senderId = request.getUserId();
         String receiverId = request.getFriendUserId();
 
-        if(senderId.equals(receiverId)) return "Cannot send friend request to yourself";
+        if (senderId.equals(receiverId))
+            return "Cannot send friend request to yourself";
 
         UserProfile sender = userProfileRepository.findByUserId(senderId)
-                .orElseThrow(() -> new ExistException("Sender not found"));
+                .orElseThrow(() -> new RuntimeException("Sender not found"));
         UserProfile receiver = userProfileRepository.findByUserId(receiverId)
-                .orElseThrow(() -> new ExistException("Receiver not found"));
+                .orElseThrow(() -> new RuntimeException("Receiver not found"));
 
-        if(sender.getFriendships() == null) sender.setFriendships(new HashSet<>());
-
-        Optional<Friendship> existing = sender.getFriendships().stream()
-                .filter(f -> f.getFriend().getUserId().equals(receiverId))
-                .findFirst();
-        if(existing.isPresent()){
+        if (userProfileRepository.hasFriendshipBetween(senderId, receiverId))
             return "Friend request already exists or you are already friends";
-        }
 
-        Friendship friendship = Friendship.builder()
-                .friend(receiver)
-                .status(FriendshipStatus.PENDING)
-                .requestedAt(Instant.now())
-                .build();
+        userProfileRepository.createFriendRequest(senderId, receiverId);
 
-        sender.getFriendships().add(friendship);
-        userProfileRepository.save(sender);
-
-        // Push Kafka event
-        
+        // Gửi Kafka event
         FriendshipEventDTO event = FriendshipEventDTO.builder()
                 .type("FRIEND_REQUEST")
                 .senderId(senderId)
                 .receiverId(receiverId)
                 .message("User " + senderId + " sent you a friend request")
                 .build();
-                
+
         BaseEvent wrapper = BaseEvent.builder()
-        .eventType("FRIEND_REQUEST")
-        .sourceService("ProfileService")
-        .payload(event)
-        .build();
+                .eventType("FRIEND_REQUEST")
+                .sourceService("ProfileService")
+                .payload(event)
+                .build();
+
         kafkaTemplate.send(NOTIFICATION_TOPIC, wrapper);
 
         return "Friend request sent";
@@ -85,112 +72,46 @@ public class FriendshipService {
         String receiverId = request.getUserId();
         String senderId = request.getFriendUserId();
 
-        UserProfile sender = userProfileRepository.findByUserId(senderId)
-                .orElseThrow(() -> new RuntimeException("Sender not found"));
-        UserProfile receiver = userProfileRepository.findByUserId(receiverId)
-                .orElseThrow(() -> new RuntimeException("Receiver not found"));
+        userProfileRepository.acceptFriendship(senderId, receiverId);
 
-        Optional<Friendship> friendRequest = sender.getFriendships().stream()
-                .filter(f -> f.getFriend().getUserId().equals(receiverId)
-                        && f.getStatus() == FriendshipStatus.PENDING)
-                .findFirst();
-
-        if(friendRequest.isEmpty()) return "No pending friend request found";
-
-        Friendship friendship = friendRequest.get();
-        friendship.setStatus(FriendshipStatus.ACCEPTED);
-        friendship.setSince(Instant.now());
-        userProfileRepository.save(sender);
-
-        // Push Kafka event
         FriendshipEventDTO event = FriendshipEventDTO.builder()
                 .type("FRIEND_REQUEST_ACCEPTED")
-                .senderId(senderId)
-                .receiverId(receiverId)
+                .senderId(receiverId)
+                .receiverId(senderId)
                 .message("User " + receiverId + " accepted your friend request")
                 .build();
-        
-        BaseEvent wrapper = BaseEvent.builder()
-        .eventType("FRIEND_REQUEST_ACCEPTED")
-        .sourceService("ProfileService")
-        .payload(event)
-        .build();
-        kafkaTemplate.send(NOTIFICATION_TOPIC, wrapper);
 
+        BaseEvent wrapper = BaseEvent.builder()
+                .eventType("FRIEND_REQUEST_ACCEPTED")
+                .sourceService("ProfileService")
+                .payload(event)
+                .build();
+
+        kafkaTemplate.send(NOTIFICATION_TOPIC, wrapper);
         return "Friend request accepted";
     }
 
     @Transactional
-    public String rejectFriendRequest(FriendActionRequest request) {
-        String receiverId = request.getUserId();
-        String senderId = request.getFriendUserId();
+    public String rejectOrCancelRequest(FriendActionRequest request) {
+        userProfileRepository.deleteFriendshipBetween(
+                request.getUserId(), request.getFriendUserId());
 
-        UserProfile sender = userProfileRepository.findByUserId(senderId)
-                .orElseThrow(() -> new RuntimeException("Sender not found"));
-
-        Optional<Friendship> friendRequest = sender.getFriendships().stream()
-                .filter(f -> f.getFriend().getUserId().equals(receiverId)
-                        && f.getStatus() == FriendshipStatus.PENDING)
-                .findFirst();
-
-        if(friendRequest.isEmpty()) return "No pending friend request found";
-
-        Friendship friendship = friendRequest.get();
-        friendship.setStatus(FriendshipStatus.REJECTED);
-        userProfileRepository.save(sender);
-
-        // Optional: push Kafka event for rejection
         FriendshipEventDTO event = FriendshipEventDTO.builder()
-                .type("FRIEND_REQUEST_REJECTED")
-                .senderId(senderId)
-                .receiverId(receiverId)
-                .message("User " + receiverId + " rejected your friend request")
+                .type("FRIEND_REQUEST_REMOVED")
+                .senderId(request.getUserId())
+                .receiverId(request.getFriendUserId())
+                .message("Friend request removed between users")
                 .build();
+
         BaseEvent wrapper = BaseEvent.builder()
-        .eventType("FRIEND_REQUEST_REJECTED")
-        .sourceService("ProfileService")
-        .payload(event)
-        .build();
-        kafkaTemplate.send(NOTIFICATION_TOPIC, wrapper);
-
-        return "Friend request rejected";
-    }
-
-    @Transactional
-    public String cancelFriendRequest(FriendActionRequest request) {
-        String senderId = request.getUserId();
-        String receiverId = request.getFriendUserId();
-
-        UserProfile sender = userProfileRepository.findByUserId(senderId)
-                .orElseThrow(() -> new RuntimeException("Sender not found"));
-
-        Optional<Friendship> friendRequest = sender.getFriendships().stream()
-                .filter(f -> f.getFriend().getUserId().equals(receiverId)
-                        && f.getStatus() == FriendshipStatus.PENDING)
-                .findFirst();
-
-        if(friendRequest.isEmpty()) return "No pending friend request to cancel";
-
-        sender.getFriendships().remove(friendRequest.get());
-        userProfileRepository.save(sender);
-
-        // Optional: push Kafka event for cancellation
-        FriendshipEventDTO event = FriendshipEventDTO.builder()
-                .type("FRIEND_REQUEST_CANCELLED")
-                .senderId(senderId)
-                .receiverId(receiverId)
-                .message("User " + senderId + " cancelled the friend request")
+                .eventType("FRIEND_REQUEST_REMOVED")
+                .sourceService("ProfileService")
+                .payload(event)
                 .build();
-        BaseEvent wrapper = BaseEvent.builder()
-        .eventType("FRIEND_REQUEST_CANCELLED")
-        .sourceService("ProfileService")
-        .payload(event)
-        .build();
+
         kafkaTemplate.send(NOTIFICATION_TOPIC, wrapper);
-
-        return "Friend request cancelled";
+        return "Friend request removed";
     }
-
 
     @Transactional
     public List<UserProfile> getFriends(String userId, int page, int size) {

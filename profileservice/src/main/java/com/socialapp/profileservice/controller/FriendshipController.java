@@ -64,7 +64,7 @@ public class FriendshipController {
 
     @PostMapping("/reject")
     public ResponseEntity<String> rejectRequest(@RequestBody FriendActionRequest request) {
-        String response = friendService.rejectFriendRequest(request);
+        String response = friendService.rejectOrCancelRequest(request);
         return ResponseEntity.ok(response);
     }
 }

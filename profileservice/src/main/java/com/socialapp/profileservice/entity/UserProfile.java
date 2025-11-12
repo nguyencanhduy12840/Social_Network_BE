@@ -7,10 +7,10 @@ import org.springframework.data.neo4j.core.schema.Id;
 import org.springframework.data.neo4j.core.schema.Node;
 import org.springframework.data.neo4j.core.schema.Property;
 import org.springframework.data.neo4j.core.schema.Relationship;
-import org.springframework.data.neo4j.core.schema.Relationship.Direction;
 import org.springframework.data.neo4j.core.support.UUIDStringGenerator;
 
 import java.time.LocalDate;
+import java.util.HashSet;
 import java.util.Set;
 
 @Getter
@@ -32,13 +32,17 @@ public class UserProfile {
     String email;
     String firstName;
     String lastName;
-
-    @Property("username")
     String username;
     String avatarUrl;
+    String bio;
     String gender;
     LocalDate dob;
 
-    @Relationship(type = "FRIEND_WITH", direction = Direction.OUTGOING)
-    Set<Friendship> friendships;
+    // Người này gửi lời mời
+    @Relationship(type = "FRIEND_WITH", direction = Relationship.Direction.OUTGOING)
+    Set<Friendship> sentFriendships = new HashSet<>();
+
+    // Người này nhận lời mời
+    @Relationship(type = "FRIEND_WITH", direction = Relationship.Direction.INCOMING)
+    Set<Friendship> receivedFriendships = new HashSet<>();
 }
