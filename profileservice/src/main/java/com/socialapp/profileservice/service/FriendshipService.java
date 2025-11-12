@@ -82,8 +82,8 @@ public class FriendshipService {
 
     @Transactional
     public String acceptFriendRequest(FriendActionRequest request) {
-        String receiverId = request.getFriendUserId();
-        String senderId = request.getUserId();
+        String receiverId = request.getUserId();
+        String senderId = request.getFriendUserId();
 
         UserProfile sender = userProfileRepository.findByUserId(senderId)
                 .orElseThrow(() -> new RuntimeException("Sender not found"));
