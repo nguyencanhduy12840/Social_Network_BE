@@ -2,45 +2,6 @@
   "configurations": [
     {
       "type": "java",
-      "name": "PostserviceApplication",
-      "request": "launch",
-      "mainClass": "com.socialapp.postservice.PostserviceApplication"
-    },
-    {
-      "type": "java",
-      "name": "Spring Boot-ConfigserviceApplication<configservice>",
-      "request": "launch",
-      "cwd": "${workspaceFolder}",
-      "mainClass": "com.socialapp.configservice.ConfigserviceApplication",
-      "projectName": "configservice",
-      "args": "",
-      "envFile": "${workspaceFolder}/.env",
-      "vmArgs": " -Dcom.sun.management.jmxremote -Dcom.sun.management.jmxremote.port=53267 -Dcom.sun.management.jmxremote.authenticate=false -Dcom.sun.management.jmxremote.ssl=false -Dspring.jmx.enabled=true -Djava.rmi.server.hostname=localhost -Dspring.application.admin.enabled=true -Dspring.boot.project.name=configservice"
-    },
-    {
-      "type": "java",
-      "name": "Spring Boot-DiscoveryserviceApplication<discoveryservice>",
-      "request": "launch",
-      "cwd": "${workspaceFolder}",
-      "mainClass": "com.socialapp.discoveryservice.DiscoveryserviceApplication",
-      "projectName": "discoveryservice",
-      "args": "",
-      "envFile": "${workspaceFolder}/.env",
-      "vmArgs": " -Dcom.sun.management.jmxremote -Dcom.sun.management.jmxremote.port=53274 -Dcom.sun.management.jmxremote.authenticate=false -Dcom.sun.management.jmxremote.ssl=false -Dspring.jmx.enabled=true -Djava.rmi.server.hostname=localhost -Dspring.application.admin.enabled=true -Dspring.boot.project.name=discoveryservice"
-    },
-    {
-      "type": "java",
-      "name": "Spring Boot-GatewayserviceApplication<gatewayservice>",
-      "request": "launch",
-      "cwd": "${workspaceFolder}",
-      "mainClass": "com.socialapp.gatewayservice.GatewayserviceApplication",
-      "projectName": "gatewayservice",
-      "args": "",
-      "envFile": "${workspaceFolder}/.env",
-      "vmArgs": " -Dcom.sun.management.jmxremote -Dcom.sun.management.jmxremote.port=59785 -Dcom.sun.management.jmxremote.authenticate=false -Dcom.sun.management.jmxremote.ssl=false -Dspring.jmx.enabled=true -Djava.rmi.server.hostname=localhost -Dspring.application.admin.enabled=true -Dspring.boot.project.name=gatewayservice"
-    },
-    {
-      "type": "java",
       "name": "Spring Boot-IdentityserviceApplication<identityservice>",
       "request": "launch",
       "cwd": "${workspaceFolder}",
@@ -51,21 +12,21 @@
     },
     {
       "type": "java",
-      "name": "Spring Boot-ProfileserviceApplication<profileservice>",
-      "request": "launch",
-      "cwd": "${workspaceFolder}",
-      "mainClass": "com.socialapp.profileservice.ProfileserviceApplication",
-      "projectName": "profileservice",
-      "args": "",
-      "envFile": "${workspaceFolder}/.env"
-    },
-    {
-      "type": "java",
       "name": "Spring Boot-PostserviceApplication<postservice>",
       "request": "launch",
       "cwd": "${workspaceFolder}",
       "mainClass": "com.socialapp.postservice.PostserviceApplication",
       "projectName": "postservice",
+      "args": "",
+      "envFile": "${workspaceFolder}/.env"
+    },
+    {
+      "type": "java",
+      "name": "Spring Boot-ProfileserviceApplication<profileservice>",
+      "request": "launch",
+      "cwd": "${workspaceFolder}",
+      "mainClass": "com.socialapp.profileservice.ProfileserviceApplication",
+      "projectName": "profileservice",
       "args": "",
       "envFile": "${workspaceFolder}/.env"
     },
