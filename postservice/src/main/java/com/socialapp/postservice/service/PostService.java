@@ -5,10 +5,13 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
+
 import org.springframework.kafka.core.KafkaTemplate;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
+import com.nimbusds.jose.proc.SecurityContext;
 import com.socialapp.postservice.dto.request.BaseEvent;
 import com.socialapp.postservice.dto.request.LikePostRequest;
 import com.socialapp.postservice.dto.request.PostEvent;
@@ -18,6 +21,7 @@ import com.socialapp.postservice.entity.Post;
 import com.socialapp.postservice.mapper.PostConverter;
 import com.socialapp.postservice.repository.PostRepository;
 import com.socialapp.postservice.repository.httpclient.ProfileClient;
+import com.socialapp.postservice.util.SecurityUtil;
 
 @Service
 public class PostService {
@@ -110,5 +114,21 @@ public class PostService {
             return postRepository.save(existingPost);
         }
         return null;
+    }
+
+    public List<Post> getPostsByUserId(String userId) {
+        Optional<String> requestId = SecurityUtil.getCurrentUserLogin();
+        if (requestId.isPresent() && requestId.get().equals(userId)) {
+            return postRepository.findByAuthorId(userId);
+        } else if (requestId.isPresent() && !requestId.get().equals(userId)){
+            Boolean isFriend = profileClient.isFriend(requestId.get(), userId).getData();
+            if(isFriend) {
+                return postRepository.findByAuthorIdAndPrivacyIn(userId, List.of("PUBLIC", "FRIENDS"));
+            } else {
+                return postRepository.findByAuthorIdAndPrivacyIn(userId, List.of("PUBLIC"));
+            }
+        }else {
+            throw new RuntimeException("Unauthorized access to posts");
+        }
     }
 }

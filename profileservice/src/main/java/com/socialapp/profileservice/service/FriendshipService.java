@@ -130,4 +130,10 @@ public class FriendshipService {
                 long skip = (long) page * size;
                 return userProfileRepository.findReceivedFriendRequests(userId, skip, size);
         }
+
+
+        @Transactional
+        public Boolean isFriend(String userId, String friendId) {
+            return userProfileRepository.hasFriendshipBetween(userId, friendId);
+        }
 }

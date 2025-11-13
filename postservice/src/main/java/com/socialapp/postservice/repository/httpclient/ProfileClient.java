@@ -7,6 +7,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 
 import com.socialapp.postservice.config.AuthenticationRequestInterceptor;
+import com.socialapp.postservice.dto.response.ApiResponse;
 import com.socialapp.postservice.dto.response.UserProfile;
 
 
@@ -15,4 +16,7 @@ import com.socialapp.postservice.dto.response.UserProfile;
 public interface ProfileClient {
     @GetMapping(value = "/profile/internal/friendships/{userId}")
     UserProfile getFriends(@PathVariable String userId);
+
+    @GetMapping(value = "/profile/internal/friendships/isFriend/{userId}/{friendId}")
+    ApiResponse<Boolean> isFriend(@PathVariable String userId, @PathVariable String friendId);
 }

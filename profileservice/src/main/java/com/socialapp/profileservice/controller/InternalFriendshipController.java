@@ -22,4 +22,9 @@ public class InternalFriendshipController {
         List<UserProfile> friends = friendshipService.getFriends(userId, 0, 20);
         return friends;
     }
+
+    @GetMapping("/internal/friendships/isFriend/{userId}/{friendId}")
+    public Boolean isFriend(@PathVariable String userId, @PathVariable String friendId) {
+        return friendshipService.isFriend(userId, friendId);
+    }
 }

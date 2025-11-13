@@ -5,21 +5,29 @@ import com.socialapp.profileservice.dto.response.UserProfileResponse;
 import com.socialapp.profileservice.entity.UserProfile;
 import com.socialapp.profileservice.mapper.UserProfileConverter;
 import com.socialapp.profileservice.repository.UserProfileRepository;
+import com.socialapp.profileservice.repository.httpclient.PostClient;
+import com.socialapp.profileservice.util.SecurityUtil;
+
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
+import java.util.Optional;
 
 @Service
 @Slf4j
 public class UserProfileService {
     private final UserProfileRepository userProfileRepository;
     private final UserProfileConverter userProfileMapper;
+    private final FriendshipService friendshipService;
+    private final PostClient postClient;
 
-    public UserProfileService(UserProfileRepository userProfileRepository, UserProfileConverter userProfileMapper) {
+    public UserProfileService(UserProfileRepository userProfileRepository, UserProfileConverter userProfileMapper, FriendshipService friendshipService, PostClient postClient) {
         this.userProfileRepository = userProfileRepository;
         this.userProfileMapper = userProfileMapper;
+        this.friendshipService = friendshipService;
+        this.postClient = postClient;
     }
 
     public UserProfileResponse createProfile(ProfileCreationRequest request) {
@@ -33,7 +41,10 @@ public class UserProfileService {
         UserProfile userProfile =
                 userProfileRepository.findById(id).orElseThrow(() -> new RuntimeException("Profile not found"));
 
-        return userProfileMapper.toUserProfileResponse(userProfile);
+        UserProfileResponse userProfileResponse = userProfileMapper.toUserProfileResponse(userProfile);
+        userProfileResponse.setPosts(postClient.getPosts(id).getData());
+        userProfileResponse.setFriendships(friendshipService.getFriends(id, 0, 100));
+        return userProfileResponse;
     }
 
     public List<UserProfileResponse> getAllProfiles() {

@@ -4,6 +4,9 @@ import lombok.*;
 import lombok.experimental.FieldDefaults;
 
 import java.time.LocalDate;
+import java.util.List;
+
+import com.socialapp.profileservice.entity.UserProfile;
 
 @Data
 @Builder
@@ -15,5 +18,11 @@ public class UserProfileResponse {
     String email;
     String firstName;
     String lastName;
+    String username;
+    String avatarUrl;
+    String bio;
+    String gender;
     LocalDate dob;
+    List<UserProfile> friendships;
+    List<PostResponse.PostOne> posts;
 }
