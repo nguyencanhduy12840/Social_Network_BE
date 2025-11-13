@@ -41,23 +41,23 @@ public interface UserProfileRepository extends Neo4jRepository<UserProfile, Stri
     boolean hasFriendshipBetween(String aId, String bId);
 
     @Query("""
-        MATCH (u:UserProfile {userId: $userId})-[:FRIEND_WITH {status: 'ACCEPTED'}]-(friend:UserProfile)
+        MATCH (u: user_profile {userId: $userId})-[:FRIEND_WITH {status: 'ACCEPTED'}]-(friend: user_profile)
         RETURN DISTINCT friend
         SKIP $skip LIMIT $size
         """)
     List<UserProfile> findFriendsByUserId(String userId, long skip, int size);
 
     @Query("""
-        MATCH (u:UserProfile {userId: $userId})-[r:FRIEND_WITH {status: 'PENDING', direction: 'OUTGOING'}]->(friend:UserProfile)
+        MATCH (u:user_profile {userId: $userId})-[r:FRIEND_WITH {direction: 'OUTGOING', status: 'PENDING'}]->(friend:user_profile)
         RETURN DISTINCT friend
         SKIP $skip LIMIT $size
         """)
     List<UserProfile> findSentFriendRequests(String userId, long skip, int size);
 
     @Query("""
-        MATCH (u:UserProfile {userId: $userId})<-[r:FRIEND_WITH {status: 'PENDING', direction: 'INCOMING'}]-(friend:UserProfile)
+        MATCH (u:user_profile {userId: $userId})<-[r:FRIEND_WITH {direction: 'OUTGOING', status: 'PENDING'}]-(friend:user_profile)
         RETURN DISTINCT friend
         SKIP $skip LIMIT $size
         """)
-    List<UserProfile> findReceivedFriendRequests(String userId, long skip, int size);
+List<UserProfile> findReceivedFriendRequests(String userId, long skip, int size);
 }
