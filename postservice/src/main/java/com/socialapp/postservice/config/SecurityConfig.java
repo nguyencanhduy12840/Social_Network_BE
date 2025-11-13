@@ -38,7 +38,8 @@ public class SecurityConfig {
     ) throws Exception {
         String[] whiteList = {
                "/create-post", 
-               "/like-post"
+               "/like-post",
+               "/internal/**"
         };
         http
                 .csrf(c -> c.disable())
