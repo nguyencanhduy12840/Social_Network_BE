@@ -9,6 +9,8 @@ import org.springframework.data.neo4j.core.schema.Property;
 import org.springframework.data.neo4j.core.schema.Relationship;
 import org.springframework.data.neo4j.core.support.UUIDStringGenerator;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+
 import java.time.LocalDate;
 import java.util.HashSet;
 import java.util.Set;
@@ -38,11 +40,11 @@ public class UserProfile {
     String gender;
     LocalDate dob;
 
-    // Người này gửi lời mời
     @Relationship(type = "FRIEND_WITH", direction = Relationship.Direction.OUTGOING)
-    Set<Friendship> sentFriendships = new HashSet<>();
+    @JsonIgnoreProperties("receivedFriendships")
+    private Set<Friendship> sentFriendships = new HashSet<>();
 
-    // Người này nhận lời mời
     @Relationship(type = "FRIEND_WITH", direction = Relationship.Direction.INCOMING)
-    Set<Friendship> receivedFriendships = new HashSet<>();
+    @JsonIgnoreProperties("sentFriendships")
+    private Set<Friendship> receivedFriendships = new HashSet<>();
 }

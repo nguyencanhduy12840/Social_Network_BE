@@ -6,6 +6,8 @@ import org.springframework.data.neo4j.core.schema.GeneratedValue;
 import org.springframework.data.neo4j.core.schema.Id;
 import org.springframework.data.neo4j.core.schema.RelationshipProperties;
 import org.springframework.data.neo4j.core.schema.TargetNode;
+
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.socialapp.profileservice.util.FriendshipStatus;
 import java.time.Instant;
 
@@ -28,5 +30,6 @@ public class Friendship {
     Instant since;
 
     @TargetNode
-    UserProfile friend;
+    @JsonIgnoreProperties({"sentFriendships", "receivedFriendships"})
+    private UserProfile friend;
 }
