@@ -57,7 +57,7 @@ public class SecurityUtil {
         JwtClaimsSet claims = JwtClaimsSet.builder()
                 .issuedAt(now)
                 .expiresAt(validity)
-                .subject(email)
+                .subject(dto.getId())
                 .claim("user", userToken)
                 .claim("permission", listAuthority)
                 .build();
