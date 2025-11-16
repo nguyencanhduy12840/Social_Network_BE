@@ -2,7 +2,6 @@ package com.socialapp.profileservice.mapper;
 
 import com.socialapp.profileservice.dto.request.ProfileCreationRequest;
 import com.socialapp.profileservice.dto.response.UserProfileResponse;
-import com.socialapp.profileservice.entity.Friendship;
 import com.socialapp.profileservice.entity.UserProfile;
 import com.socialapp.profileservice.util.FriendshipStatus;
 import jakarta.annotation.PostConstruct;

@@ -23,6 +23,7 @@ public class UserProfileResponse {
     String bio;
     String gender;
     LocalDate dob;
+    String friendStatus;
     List<UserProfile> friendships;
     List<PostResponse.PostOne> posts;
 }
