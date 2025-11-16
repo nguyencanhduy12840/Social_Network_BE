@@ -17,10 +17,15 @@ public interface UserProfileRepository extends Neo4jRepository<UserProfile, Stri
 
     @Query("""
         MATCH (a:user_profile {userId:$senderId}), (b:user_profile {userId:$receiverId})
-        CREATE (a)-[:FRIEND_WITH {status:'PENDING', direction:'OUTGOING', requestedAt:datetime()}]->(b),
-               (b)-[:FRIEND_WITH {status:'PENDING', direction:'INCOMING', requestedAt:datetime()}]->(a)
+        CREATE (a)-[:FRIEND_WITH {status:'PENDING', requestedAt:datetime()}]->(b)
         """)
     void createFriendRequest(String senderId, String receiverId);
+
+    @Query("""
+        MATCH (a:user_profile {userId:$senderId})-[r:FRIEND_WITH {status:'PENDING'}]->(b:user_profile {userId:$receiverId})
+        SET r.status = 'ACCEPTED', r.since = datetime()
+        """)
+    void acceptFriendship(String senderId, String receiverId);
 
     @Query("""
         MATCH (a:user_profile {userId:$userId})-[r:FRIEND_WITH]-(b:user_profile {userId:$friendUserId})
@@ -29,35 +34,33 @@ public interface UserProfileRepository extends Neo4jRepository<UserProfile, Stri
     void deleteFriendshipBetween(String userId, String friendUserId);
 
     @Query("""
-        MATCH (a:user_profile {userId:$senderId})-[r:FRIEND_WITH]-(b:user_profile {userId:$receiverId})
-        SET r.status = 'ACCEPTED', r.since = datetime()
-        """)
-    void acceptFriendship(String senderId, String receiverId);
-
-    @Query("""
         MATCH (a:user_profile {userId:$aId})-[r:FRIEND_WITH]-(b:user_profile {userId:$bId})
+        WHERE r.status = 'ACCEPTED'
         RETURN COUNT(r) > 0
         """)
     boolean hasFriendshipBetween(String aId, String bId);
 
+    // Sent requests
     @Query("""
-        MATCH (u: user_profile {userId: $userId})-[:FRIEND_WITH {status: 'ACCEPTED'}]-(friend: user_profile)
-        RETURN DISTINCT friend
+        MATCH (u:user_profile {userId:$userId})-[:FRIEND_WITH {status:'PENDING'}]->(friend:user_profile)
+        RETURN friend
         SKIP $skip LIMIT $size
         """)
-    List<UserProfile> findFriendsByUserId(String userId, long skip, int size);
+    List<UserProfile> findSentFriendRequests(String userId, long skip, long size);
 
+    // Received requests
     @Query("""
-        MATCH (u:user_profile {userId: $userId})-[r:FRIEND_WITH {direction: 'OUTGOING', status: 'PENDING'}]->(friend:user_profile)
-        RETURN DISTINCT friend
+        MATCH (u:user_profile {userId:$userId})<-[:FRIEND_WITH {status:'PENDING'}]-(friend:user_profile)
+        RETURN friend
         SKIP $skip LIMIT $size
         """)
-    List<UserProfile> findSentFriendRequests(String userId, long skip, int size);
+    List<UserProfile> findReceivedFriendRequests(String userId, long skip, long size);
 
+    // Friends
     @Query("""
-        MATCH (u:user_profile {userId: $userId})<-[r:FRIEND_WITH {direction: 'OUTGOING', status: 'PENDING'}]-(friend:user_profile)
+        MATCH (u:user_profile {userId:$userId})-[:FRIEND_WITH {status:'ACCEPTED'}]-(friend:user_profile)
         RETURN DISTINCT friend
         SKIP $skip LIMIT $size
         """)
-List<UserProfile> findReceivedFriendRequests(String userId, long skip, int size);
+    List<UserProfile> findFriendsByUserId(String userId, long skip, long size);
 }

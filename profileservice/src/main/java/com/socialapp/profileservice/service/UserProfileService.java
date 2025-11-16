@@ -6,6 +6,7 @@ import com.socialapp.profileservice.entity.UserProfile;
 import com.socialapp.profileservice.mapper.UserProfileConverter;
 import com.socialapp.profileservice.repository.UserProfileRepository;
 import com.socialapp.profileservice.repository.httpclient.PostClient;
+import com.socialapp.profileservice.util.FriendshipStatus;
 import com.socialapp.profileservice.util.SecurityUtil;
 
 import lombok.extern.slf4j.Slf4j;
@@ -68,18 +69,30 @@ public class UserProfileService {
 
     private String determineFriendStatus(String currentId, String profileId) {
 
-        boolean isFriend = userProfileRepository.hasFriendshipBetween(currentId, profileId);
+        UserProfile current = userProfileRepository.findByUserId(currentId).orElse(null);
+        UserProfile profile = userProfileRepository.findByUserId(profileId).orElse(null);
+        if (current == null || profile == null) return "NONE";
+
+        boolean outgoingPending = current.getSentFriendships().stream()
+            .anyMatch(f -> f.getFriend().getUserId().equals(profileId)
+                        && f.getStatus() == FriendshipStatus.PENDING);
+
+        if (outgoingPending) return "OUTGOING_PENDING";
+
+        boolean incomingPending = current.getReceivedFriendships().stream()
+            .anyMatch(f -> f.getFriend().getUserId().equals(profileId)
+                        && f.getStatus() == FriendshipStatus.PENDING);
+
+        if (incomingPending) return "INCOMING_PENDING";
+
+        boolean isFriend = current.getSentFriendships().stream().anyMatch(f ->
+                        f.getFriend().getUserId().equals(profileId)
+                        && f.getStatus() == FriendshipStatus.ACCEPTED)
+                        || current.getReceivedFriendships().stream().anyMatch(f ->
+                        f.getFriend().getUserId().equals(profileId)
+                        && f.getStatus() == FriendshipStatus.ACCEPTED);
+
         if (isFriend) return "FRIEND";
-
-        List<UserProfile> sent = userProfileRepository.findSentFriendRequests(currentId, 0, 100);
-        boolean isSentPending = sent.stream()
-                .anyMatch(f -> f.getUserId().equals(profileId));
-        if (isSentPending) return "PENDING";
-
-        List<UserProfile> received = userProfileRepository.findReceivedFriendRequests(currentId, 0, 100);
-        boolean isReceivePending = received.stream()
-                .anyMatch(f -> f.getUserId().equals(profileId));
-        if (isReceivePending) return "PENDING";
 
         return "NONE";
     }
