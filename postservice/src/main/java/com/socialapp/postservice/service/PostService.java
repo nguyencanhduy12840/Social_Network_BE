@@ -78,25 +78,27 @@ public class PostService {
 
         Post savedPost = postRepository.save(post);
 
-        UserProfile friends = profileClient.getFriends(userId);
-        friends.getData().parallelStream().forEach(friend-> {
-            PostEvent event = PostEvent.builder()
-                            .postId(savedPost.getId())
-                            .authorId(userId)
-                            .content(content)
-                            .eventType("NEW_POST")
-                            .receiverId(friend.getUserId())
-                            .build();
+        if(savedPost.getPrivacy().equals("PUBLIC") || savedPost.getPrivacy().equals("FRIENDS")){
+            //send notifications to friends
+            UserProfile friends = profileClient.getFriends(userId);
+            friends.getData().parallelStream().forEach(friend-> {
+                PostEvent event = PostEvent.builder()
+                                .postId(savedPost.getId())
+                                .authorId(userId)
+                                .content(content)
+                                .eventType("NEW_POST")
+                                .receiverId(friend.getUserId())
+                                .build();
 
-                        BaseEvent baseEvent = BaseEvent.builder()
-                            .eventType("NEW_POST")
-                            .sourceService("PostService")
-                            .payload(event)
-                            .build();
+                            BaseEvent baseEvent = BaseEvent.builder()
+                                .eventType("NEW_POST")
+                                .sourceService("PostService")
+                                .payload(event)
+                                .build();
 
-                    kafkaTemplate.send(NOTIFICATION_TOPIC, baseEvent);
-        });
-        
+                        kafkaTemplate.send(NOTIFICATION_TOPIC, baseEvent);
+            });
+        }
         return postConverter.convertToCreatePostResponse(savedPost);
     }
 
