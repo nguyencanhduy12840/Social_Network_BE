@@ -27,10 +27,10 @@ public class PostController {
     @PostMapping("/create-post")
     public ResponseEntity<CreatePostResponse> createPost(
             @RequestParam("userId") String userId, 
-            @RequestParam String content, 
+            @RequestParam(required = false) String content,
             @RequestParam(required = false) String groupId, 
             @RequestParam("privacy") String privacy,
-            @RequestPart("media") MultipartFile[] mediaFiles) {
+            @RequestPart(value = "media", required = false) MultipartFile[] mediaFiles) {
                 CreatePostResponse post = postService.createPost(userId, content, groupId, privacy, mediaFiles);
                 return ResponseEntity.ok(post);
             }
@@ -57,5 +57,14 @@ public class PostController {
             throw new NotFoundException("Post not found");
         }
         return ResponseEntity.ok(updatedPost);
+     }
+
+     @DeleteMapping("/delete-post/{postId}")
+     public ResponseEntity<String> deletePost(@PathVariable String postId) {
+        boolean isDeleted = postService.deletePost(postId);
+        if (!isDeleted) {
+            throw new NotFoundException("Post not found");
+        }
+        return ResponseEntity.ok("Post deleted successfully");
      }
 }

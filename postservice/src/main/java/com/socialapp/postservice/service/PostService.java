@@ -158,4 +158,14 @@ public class PostService {
             throw new RuntimeException("Post not found");
         }
      }
+
+     public boolean deletePost(String postId) {
+        Post post = postRepository.findById(postId).orElse(null);
+        if (post != null) {
+            postRepository.delete(post);
+            return true;
+        } else {
+            return false;
+        }
+     }
 }
