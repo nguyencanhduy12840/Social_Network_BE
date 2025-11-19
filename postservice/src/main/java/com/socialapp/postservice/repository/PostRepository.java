@@ -15,4 +15,8 @@ public interface PostRepository extends MongoRepository<Post, String> {
     List<Post> findByAuthorIdAndPrivacyIn(String authorId, List<String> privacy);
 
     List<Post> findByAuthorId(String authorId);
+
+    List<Post> findByAuthorIdInAndPrivacyInOrderByCreatedAtDesc(List<String> authorIds, List<String> privacy);
+
+    List<Post> findByPrivacyOrderByCreatedAtDesc(String privacy);
 }

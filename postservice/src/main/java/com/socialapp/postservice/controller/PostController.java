@@ -1,12 +1,8 @@
 package com.socialapp.postservice.controller;
 
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.*;
 
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RequestPart;
-import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
 
@@ -16,6 +12,8 @@ import com.socialapp.postservice.entity.Post;
 import com.socialapp.postservice.service.PostService;
 
 import jakarta.ws.rs.NotFoundException;
+
+import java.util.List;
 
 @RestController
 public class PostController {
@@ -45,6 +43,9 @@ public class PostController {
         return ResponseEntity.ok(updatedPost);
     }
 
-    // @GetMapping("/get-post")
-    // public ResponseEntity<
+     @GetMapping("/get-post")
+     public ResponseEntity<List<Post>> getPostDisplay(){
+        List<Post> postList = postService.getPostOnMainScreen();
+        return ResponseEntity.ok().body(postList);
+     }
 }

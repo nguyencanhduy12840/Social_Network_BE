@@ -133,4 +133,16 @@ public class PostService {
             throw new RuntimeException("Unauthorized access to posts");
         }
     }
+
+     public List<Post> getPostOnMainScreen() {
+        Optional<String> requestId = SecurityUtil.getCurrentUserLogin();
+        if (requestId.isPresent()) {
+            UserProfile friends = profileClient.getFriends(requestId.get());
+            List<String> friendIds = friends.getData().stream().map(UserProfile.UserProfileOne::getUserId).toList();
+            friendIds.add(requestId.get());
+            return postRepository.findByAuthorIdInAndPrivacyInOrderByCreatedAtDesc(friendIds, List.of("PUBLIC", "FRIENDS"));
+        } else {
+            return postRepository.findByPrivacyOrderByCreatedAtDesc("PUBLIC");
+        }
+    }
 }
