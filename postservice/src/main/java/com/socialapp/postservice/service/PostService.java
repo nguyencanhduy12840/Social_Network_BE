@@ -6,6 +6,7 @@ import java.util.List;
 import java.util.Optional;
 
 
+import com.socialapp.postservice.dto.request.UpdatePostRequest;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
@@ -144,5 +145,17 @@ public class PostService {
         } else {
             return postRepository.findByPrivacyOrderByCreatedAtDesc("PUBLIC");
         }
-    }
+     }
+
+     public Post updatePost(UpdatePostRequest updatePostRequest) {
+        Post post = postRepository.findById(updatePostRequest.getPostId()).orElse(null);
+        if (post != null) {
+            post.setContent(updatePostRequest.getContent());
+            post.setPrivacy(updatePostRequest.getPrivacy());
+            post.setMedia(updatePostRequest.getMedia());
+            return postRepository.save(post);
+        } else {
+            throw new RuntimeException("Post not found");
+        }
+     }
 }
