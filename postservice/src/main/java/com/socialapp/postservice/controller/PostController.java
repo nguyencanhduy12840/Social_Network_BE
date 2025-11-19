@@ -67,4 +67,13 @@ public class PostController {
         }
         return ResponseEntity.ok("Post deleted successfully");
      }
+
+     @PostMapping("/unlike-post")
+     public ResponseEntity<Post> unlikePost(@RequestBody LikePostRequest unlikePostRequest) {
+        Post updatedPost = postService.unlikePost(unlikePostRequest);
+        if (updatedPost == null) {
+            throw new NotFoundException("Post not found");
+        }
+        return ResponseEntity.ok(updatedPost);
+     }
 }

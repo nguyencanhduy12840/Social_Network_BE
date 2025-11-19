@@ -168,4 +168,16 @@ public class PostService {
             return false;
         }
      }
+
+     public Post unlikePost(LikePostRequest unlikePostRequest) {
+         Optional<Post> post = postRepository.findById(unlikePostRequest.getPostId());
+         if (post.isPresent()) {
+             Post existingPost = post.get();
+             List<String> likes = existingPost.getLikes();
+             likes.remove(unlikePostRequest.getUserId());
+             existingPost.setLikes(likes);
+             return postRepository.save(existingPost);
+         }
+         return null;
+     }
 }
