@@ -37,8 +37,12 @@ public class SecurityConfig {
     public SecurityFilterChain filterChain(HttpSecurity http
     ) throws Exception {
         String[] whiteList = {
-               "/create-post", 
+               "/create-post",
                "/like-post",
+                "/get-post",
+                "/update-post",
+                "/unlike-post",
+                "/delete-post/**",
                "/internal/**"
         };
         http

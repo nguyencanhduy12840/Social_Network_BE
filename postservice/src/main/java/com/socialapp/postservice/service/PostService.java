@@ -135,17 +135,27 @@ public class PostService {
         }
     }
 
-     public List<Post> getPostOnMainScreen() {
+    public List<Post> getPostOnMainScreen() {
         Optional<String> requestId = SecurityUtil.getCurrentUserLogin();
         if (requestId.isPresent()) {
             UserProfile friends = profileClient.getFriends(requestId.get());
-            List<String> friendIds = friends.getData().stream().map(UserProfile.UserProfileOne::getUserId).toList();
+
+            List<String> friendIds = new ArrayList<>(
+                    friends.getData().stream()
+                            .map(UserProfile.UserProfileOne::getUserId)
+                            .toList()
+            );
+
             friendIds.add(requestId.get());
-            return postRepository.findByAuthorIdInAndPrivacyInOrderByCreatedAtDesc(friendIds, List.of("PUBLIC", "FRIENDS"));
+
+            return postRepository.findByAuthorIdInAndPrivacyInOrderByCreatedAtDesc(
+                    friendIds,
+                    List.of("PUBLIC", "FRIENDS")
+            );
         } else {
             return postRepository.findByPrivacyOrderByCreatedAtDesc("PUBLIC");
         }
-     }
+    }
 
      public Post updatePost(UpdatePostRequest updatePostRequest) {
         Post post = postRepository.findById(updatePostRequest.getPostId()).orElse(null);
