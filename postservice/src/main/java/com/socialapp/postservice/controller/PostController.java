@@ -79,4 +79,13 @@ public class PostController {
         }
         return ResponseEntity.ok(updatedPost);
      }
+
+     @GetMapping("/{postId}")
+     public ResponseEntity<Post> getPostById(@PathVariable String postId) {
+        Post post = postService.getPostById(postId);
+        if (post == null) {
+            throw new NotFoundException("Post not found");
+        }
+        return ResponseEntity.ok(post);
+     }
 }

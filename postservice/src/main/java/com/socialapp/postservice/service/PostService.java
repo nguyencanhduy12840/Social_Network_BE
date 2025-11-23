@@ -205,4 +205,8 @@ public class PostService {
          }
          return null;
      }
+
+     public Post getPostById(String postId){
+        return postRepository.findById(postId).orElse(null);
+     }
 }
