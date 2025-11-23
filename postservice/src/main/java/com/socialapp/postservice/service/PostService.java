@@ -7,6 +7,7 @@ import java.util.Optional;
 
 
 import com.socialapp.postservice.dto.request.UpdatePostRequest;
+import com.socialapp.postservice.dto.response.PostResponse;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
@@ -135,7 +136,7 @@ public class PostService {
         }
     }
 
-    public List<Post> getPostOnMainScreen() {
+    public List<PostResponse> getPostOnMainScreen() {
         Optional<String> requestId = SecurityUtil.getCurrentUserLogin();
         if (requestId.isPresent()) {
             UserProfile friends = profileClient.getFriends(requestId.get());
@@ -148,12 +149,30 @@ public class PostService {
 
             friendIds.add(requestId.get());
 
-            return postRepository.findByAuthorIdInAndPrivacyInOrderByCreatedAtDesc(
+            List<Post> posts = postRepository.findByAuthorIdInAndPrivacyInOrderByCreatedAtDesc(
                     friendIds,
                     List.of("PUBLIC", "FRIENDS")
             );
+            List<PostResponse> postResponses = new ArrayList<>();
+            for(Post post : posts){
+                PostResponse postResponse = postConverter.convertToPostResponse(post);
+                UserProfile.UserProfileOne authorProfile = profileClient.getUserProfile(post.getAuthorId())
+                        .getData().get(0);
+                postResponse.setAuthorProfile(authorProfile);
+                postResponses.add(postResponse);
+            }
+            return postResponses;
         } else {
-            return postRepository.findByPrivacyOrderByCreatedAtDesc("PUBLIC");
+            List<Post> posts = postRepository.findByPrivacyOrderByCreatedAtDesc("PUBLIC");
+            List<PostResponse> postResponses = new ArrayList<>();
+            for(Post post : posts){
+                PostResponse postResponse = postConverter.convertToPostResponse(post);
+                UserProfile.UserProfileOne authorProfile = profileClient.getUserProfile(post.getAuthorId())
+                        .getData().get(0);
+                postResponse.setAuthorProfile(authorProfile);
+                postResponses.add(postResponse);
+            }
+            return postResponses;
         }
     }
 
@@ -206,7 +225,16 @@ public class PostService {
          return null;
      }
 
-     public Post getPostById(String postId){
-        return postRepository.findById(postId).orElse(null);
+     public PostResponse getPostById(String postId){
+        Optional<Post> post = postRepository.findById(postId);
+        if(post.isPresent()){
+            Post currentPost = post.get();
+            PostResponse postResponse = postConverter.convertToPostResponse(currentPost);
+            UserProfile.UserProfileOne authorProfile = profileClient.getUserProfile(currentPost.getAuthorId())
+                    .getData().get(0);
+            postResponse.setAuthorProfile(authorProfile);
+            return postResponse;
+        }
+        return null;
      }
 }

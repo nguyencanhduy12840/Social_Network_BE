@@ -1,5 +1,6 @@
 package com.socialapp.postservice.mapper;
 
+import com.socialapp.postservice.dto.response.PostResponse;
 import org.modelmapper.ModelMapper;
 import org.springframework.stereotype.Component;
 
@@ -17,5 +18,10 @@ public class PostConverter {
     public CreatePostResponse convertToCreatePostResponse(Post post) {
         CreatePostResponse createPostResponse = modelMapper.map(post, CreatePostResponse.class);
         return createPostResponse;
+    }
+
+    public PostResponse convertToPostResponse(Post post) {
+        PostResponse postResponse = modelMapper.map(post, PostResponse.class);
+        return postResponse;
     }
 }

@@ -1,6 +1,7 @@
 package com.socialapp.postservice.controller;
 
 import com.socialapp.postservice.dto.request.UpdatePostRequest;
+import com.socialapp.postservice.dto.response.PostResponse;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -45,8 +46,8 @@ public class PostController {
     }
 
      @GetMapping("/get-post")
-     public ResponseEntity<List<Post>> getPostDisplay(){
-        List<Post> postList = postService.getPostOnMainScreen();
+     public ResponseEntity<List<PostResponse>> getPostDisplay(){
+        List<PostResponse> postList = postService.getPostOnMainScreen();
         return ResponseEntity.ok().body(postList);
      }
 
@@ -81,8 +82,8 @@ public class PostController {
      }
 
      @GetMapping("/{postId}")
-     public ResponseEntity<Post> getPostById(@PathVariable String postId) {
-        Post post = postService.getPostById(postId);
+     public ResponseEntity<PostResponse> getPostById(@PathVariable String postId) {
+        PostResponse post = postService.getPostById(postId);
         if (post == null) {
             throw new NotFoundException("Post not found");
         }

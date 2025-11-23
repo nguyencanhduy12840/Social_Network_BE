@@ -96,4 +96,12 @@ public class UserProfileService {
 
         return "NONE";
     }
+
+    public UserProfileResponse getProfileById(String id) {
+        UserProfile userProfile =
+                userProfileRepository.findById(id)
+                        .orElseThrow(() -> new RuntimeException("Profile not found"));
+
+        return userProfileMapper.toUserProfileResponse(userProfile);
+    }
 }

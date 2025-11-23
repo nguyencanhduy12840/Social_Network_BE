@@ -19,4 +19,7 @@ public interface ProfileClient {
 
     @GetMapping(value = "/profile/internal/friendships/isFriend/{userId}/{friendId}")
     ApiResponse<Boolean> isFriend(@PathVariable String userId, @PathVariable String friendId);
+
+    @GetMapping(value = "/profile/internal/users/{userId}")
+    UserProfile getUserProfile(@PathVariable String userId);
 }
