@@ -28,6 +28,8 @@ public class Comment {
 
     Instant createdAt;
 
+    Instant updatedAt;
+
     String parentCommentId;
 
     List<String> likes;

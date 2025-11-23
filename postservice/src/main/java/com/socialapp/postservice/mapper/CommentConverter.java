@@ -1,6 +1,7 @@
 package com.socialapp.postservice.mapper;
 
 import com.socialapp.postservice.dto.request.CreateCommentRequest;
+import com.socialapp.postservice.dto.request.UpdateCommentRequest;
 import com.socialapp.postservice.entity.Comment;
 import org.modelmapper.ModelMapper;
 import org.springframework.stereotype.Component;
@@ -21,6 +22,14 @@ public class CommentConverter {
         comment.setAuthorId(createCommentRequest.getAuthorId());
         comment.setContent(createCommentRequest.getContent());
         comment.setCreatedAt(Instant.now());
+        return comment;
+    }
+
+    public Comment toCommentFromUpdate(UpdateCommentRequest updateCommentRequest) {
+        Comment comment = new Comment();
+        comment.setId(updateCommentRequest.getCommentId());
+        comment.setContent(updateCommentRequest.getContent());
+        comment.setUpdatedAt(Instant.now());
         return comment;
     }
 }

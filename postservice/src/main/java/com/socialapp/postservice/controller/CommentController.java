@@ -3,7 +3,9 @@ package com.socialapp.postservice.controller;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.socialapp.postservice.dto.request.CreateCommentRequest;
+import com.socialapp.postservice.dto.request.UpdateCommentRequest;
 import com.socialapp.postservice.entity.Comment;
+import com.socialapp.postservice.exception.NotFoundException;
 import com.socialapp.postservice.service.CommentService;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -35,5 +37,20 @@ public class CommentController {
     @GetMapping("/{postId}")
     public ResponseEntity<List<Comment>> getComments(@PathVariable String postId) {
         return ResponseEntity.ok(commentService.getCommentsByPostId(postId.toString()));
+    }
+
+    @DeleteMapping("/{commentId}")
+    public ResponseEntity<String> deleteComment(@PathVariable String commentId) {
+        if(commentService.getCommentById(commentId.toString()) == null) {
+            throw new NotFoundException("Comment not found");
+        }
+        commentService.deleteComment(commentId);
+        return ResponseEntity.ok("Comment deleted successfully");
+    }
+
+    @PutMapping("/{commentId}")
+    public ResponseEntity<Comment> updateComment(@RequestPart("comment")UpdateCommentRequest updateCommentRequest,
+                                                 @RequestPart(value = "media", required = false) MultipartFile[] mediaFiles){
+        return ResponseEntity.ok(commentService.updateComment(updateCommentRequest, mediaFiles));
     }
 }

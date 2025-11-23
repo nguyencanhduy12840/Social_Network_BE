@@ -2,6 +2,7 @@ package com.socialapp.postservice.service;
 
 import com.socialapp.postservice.dto.request.BaseEvent;
 import com.socialapp.postservice.dto.request.CreateCommentRequest;
+import com.socialapp.postservice.dto.request.UpdateCommentRequest;
 import com.socialapp.postservice.entity.Comment;
 import com.socialapp.postservice.mapper.CommentConverter;
 import com.socialapp.postservice.repository.CommentRepository;
@@ -11,6 +12,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 
 @Service
 public class CommentService {
@@ -53,5 +55,46 @@ public class CommentService {
 
     public List<Comment> getCommentsByPostId(String postId) {
         return commentRepository.findByPostId(postId);
+    }
+
+    public void deleteComment(String commentId) {
+        Optional<Comment> comment = commentRepository.findById(commentId);
+        if (comment.isEmpty()) {
+            throw new RuntimeException("Comment not found");
+        }
+        commentRepository.deleteById(commentId);
+    }
+
+    public Comment getCommentById(String commentId) {
+        Optional<Comment> comment = commentRepository.findById(commentId);
+        if (comment.isEmpty()) {
+            throw new RuntimeException("Comment not found");
+        }
+        return comment.get();
+    }
+
+    public Comment updateComment(UpdateCommentRequest comment, MultipartFile[] mediaFiles) {
+        Comment updatedComment = commentConverter.toCommentFromUpdate(comment);
+        List<String> mediaUrls = new ArrayList<>();
+
+        if (mediaFiles != null && mediaFiles.length > 0) {
+            for (MultipartFile file : mediaFiles) {
+                String fileType = file.getContentType();
+                String url;
+
+                if (fileType != null && fileType.startsWith("video")) {
+                    url = cloudinaryService.uploadVideo(file);
+                } else {
+                    url = cloudinaryService.uploadImage(file);
+                }
+
+                mediaUrls.add(url);
+            }
+        }
+        if(getCommentById(updatedComment.getId()) != null) {
+            updatedComment.setMedia(mediaUrls);
+            return commentRepository.save(updatedComment);
+        }
+        return null;
     }
 }
