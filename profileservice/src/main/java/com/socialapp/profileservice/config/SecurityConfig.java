@@ -37,7 +37,7 @@ public class SecurityConfig {
     public SecurityFilterChain filterChain(HttpSecurity http
     ) throws Exception {
         String[] whiteList = {
-                "/internal/users",
+                "/internal/users/**",
                 "/users/**",
                 "/friendships/**",
                 "/internal/friendships/**",

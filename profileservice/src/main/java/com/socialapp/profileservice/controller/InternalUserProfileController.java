@@ -3,10 +3,7 @@ package com.socialapp.profileservice.controller;
 import com.socialapp.profileservice.dto.request.ProfileCreationRequest;
 import com.socialapp.profileservice.dto.response.UserProfileResponse;
 import com.socialapp.profileservice.service.UserProfileService;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 @RestController
 public class InternalUserProfileController {
@@ -20,7 +17,7 @@ public class InternalUserProfileController {
     }
 
     @GetMapping("/internal/users/{userId}")
-    UserProfileResponse getUserProfile(String userId) {
+    UserProfileResponse getUserProfile(@PathVariable String userId) {
         return userProfileService.getProfileById(userId);
     }
 }

@@ -2,6 +2,7 @@ package com.socialapp.postservice.repository.httpclient;
 
 import java.util.List;
 
+import com.socialapp.postservice.dto.response.OneUserProfileResponse;
 import org.springframework.cloud.openfeign.FeignClient;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -21,5 +22,5 @@ public interface ProfileClient {
     ApiResponse<Boolean> isFriend(@PathVariable String userId, @PathVariable String friendId);
 
     @GetMapping(value = "/profile/internal/users/{userId}")
-    UserProfile getUserProfile(@PathVariable String userId);
+    OneUserProfileResponse getUserProfile(@PathVariable String userId);
 }

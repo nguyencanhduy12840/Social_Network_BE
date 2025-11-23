@@ -7,6 +7,7 @@ import java.util.Optional;
 
 
 import com.socialapp.postservice.dto.request.UpdatePostRequest;
+import com.socialapp.postservice.dto.response.OneUserProfileResponse;
 import com.socialapp.postservice.dto.response.PostResponse;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -156,8 +157,7 @@ public class PostService {
             List<PostResponse> postResponses = new ArrayList<>();
             for(Post post : posts){
                 PostResponse postResponse = postConverter.convertToPostResponse(post);
-                UserProfile.UserProfileOne authorProfile = profileClient.getUserProfile(post.getAuthorId())
-                        .getData().get(0);
+                OneUserProfileResponse authorProfile = profileClient.getUserProfile(post.getAuthorId());
                 postResponse.setAuthorProfile(authorProfile);
                 postResponses.add(postResponse);
             }
@@ -167,8 +167,7 @@ public class PostService {
             List<PostResponse> postResponses = new ArrayList<>();
             for(Post post : posts){
                 PostResponse postResponse = postConverter.convertToPostResponse(post);
-                UserProfile.UserProfileOne authorProfile = profileClient.getUserProfile(post.getAuthorId())
-                        .getData().get(0);
+                OneUserProfileResponse authorProfile = profileClient.getUserProfile(post.getAuthorId());
                 postResponse.setAuthorProfile(authorProfile);
                 postResponses.add(postResponse);
             }
@@ -230,8 +229,7 @@ public class PostService {
         if(post.isPresent()){
             Post currentPost = post.get();
             PostResponse postResponse = postConverter.convertToPostResponse(currentPost);
-            UserProfile.UserProfileOne authorProfile = profileClient.getUserProfile(currentPost.getAuthorId())
-                    .getData().get(0);
+            OneUserProfileResponse authorProfile = profileClient.getUserProfile(currentPost.getAuthorId());
             postResponse.setAuthorProfile(authorProfile);
             return postResponse;
         }
