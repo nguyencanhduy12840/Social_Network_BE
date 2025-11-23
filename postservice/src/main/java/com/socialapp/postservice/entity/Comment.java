@@ -1,4 +1,34 @@
 package com.socialapp.postservice.entity;
 
+import lombok.*;
+import lombok.experimental.FieldDefaults;
+import org.springframework.data.annotation.Id;
+import org.springframework.data.mongodb.core.mapping.Document;
+
+import java.time.Instant;
+import java.util.List;
+
+@Data
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor
+@FieldDefaults(level = AccessLevel.PRIVATE)
+@Document(collection = "comments")
 public class Comment {
+    @Id
+    String id;
+
+    String postId;
+
+    String authorId;
+
+    String content;
+
+    List<String> media;
+
+    Instant createdAt;
+
+    String parentCommentId;
+
+    List<String> likes;
 }
