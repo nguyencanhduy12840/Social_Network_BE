@@ -48,7 +48,7 @@ public class PostService {
         List<String> mediaUrls = new ArrayList<>();
 
         if (mediaFiles != null && mediaFiles.length > 0) {
-            for (MultipartFile file : mediaFiles) {
+                for (MultipartFile file : mediaFiles) {
                 String fileType = file.getContentType();
                 String url;
 
@@ -157,12 +157,27 @@ public class PostService {
         }
     }
 
-     public Post updatePost(UpdatePostRequest updatePostRequest) {
-        Post post = postRepository.findById(updatePostRequest.getPostId()).orElse(null);
+     public Post updatePost(String postId, String content, String privacy, MultipartFile[] mediaFiles) {
+        Post post = postRepository.findById(postId).orElse(null);
         if (post != null) {
-            post.setContent(updatePostRequest.getContent());
-            post.setPrivacy(updatePostRequest.getPrivacy());
-            post.setMedia(updatePostRequest.getMedia());
+            post.setContent(content);
+            List<String> mediaUrls = new ArrayList<>();
+            post.setPrivacy(privacy);
+            if (mediaFiles != null && mediaFiles.length > 0) {
+                for (MultipartFile file : mediaFiles) {
+                    String fileType = file.getContentType();
+                    String url;
+
+                    if (fileType != null && fileType.startsWith("video")) {
+                        url = cloudinaryService.uploadVideo(file);
+                    } else {
+                        url = cloudinaryService.uploadImage(file);
+                    }
+
+                    mediaUrls.add(url);
+                }
+            }
+            post.setMedia(mediaUrls);
             return postRepository.save(post);
         } else {
             throw new RuntimeException("Post not found");

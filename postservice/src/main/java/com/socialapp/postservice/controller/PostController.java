@@ -26,9 +26,9 @@ public class PostController {
 
     @PostMapping("/create-post")
     public ResponseEntity<CreatePostResponse> createPost(
-            @RequestParam("userId") String userId, 
+            @RequestParam("userId") String userId,
             @RequestParam(required = false) String content,
-            @RequestParam(required = false) String groupId, 
+            @RequestParam(required = false) String groupId,
             @RequestParam("privacy") String privacy,
             @RequestPart(value = "media", required = false) MultipartFile[] mediaFiles) {
                 CreatePostResponse post = postService.createPost(userId, content, groupId, privacy, mediaFiles);
@@ -51,8 +51,11 @@ public class PostController {
      }
 
      @PostMapping("/update-post")
-     public ResponseEntity<Post> updatePost(@RequestBody UpdatePostRequest request) {
-        Post updatedPost = postService.updatePost(request);
+     public ResponseEntity<Post> updatePost(@RequestParam("postId") String postId,
+                                            @RequestParam(required = false) String content,
+                                            @RequestParam("privacy") String privacy,
+                                            @RequestPart(value = "media", required = false) MultipartFile[] mediaFiles) {
+        Post updatedPost = postService.updatePost(postId, content, privacy, mediaFiles);
         if (updatedPost == null) {
             throw new NotFoundException("Post not found");
         }
