@@ -158,7 +158,7 @@ public class PostService {
             for(Post post : posts){
                 PostResponse postResponse = postConverter.convertToPostResponse(post);
                 OneUserProfileResponse authorProfile = profileClient.getUserProfile(post.getAuthorId());
-                postResponse.setAuthorProfile(authorProfile);
+                postResponse.setAuthorProfile(authorProfile.getData());
                 postResponses.add(postResponse);
             }
             return postResponses;
@@ -168,7 +168,7 @@ public class PostService {
             for(Post post : posts){
                 PostResponse postResponse = postConverter.convertToPostResponse(post);
                 OneUserProfileResponse authorProfile = profileClient.getUserProfile(post.getAuthorId());
-                postResponse.setAuthorProfile(authorProfile);
+                postResponse.setAuthorProfile(authorProfile.getData());
                 postResponses.add(postResponse);
             }
             return postResponses;
@@ -230,7 +230,7 @@ public class PostService {
             Post currentPost = post.get();
             PostResponse postResponse = postConverter.convertToPostResponse(currentPost);
             OneUserProfileResponse authorProfile = profileClient.getUserProfile(currentPost.getAuthorId());
-            postResponse.setAuthorProfile(authorProfile);
+            postResponse.setAuthorProfile(authorProfile.getData());
             return postResponse;
         }
         return null;

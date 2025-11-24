@@ -15,9 +15,7 @@ import java.util.List;
 public class PostResponse {
     String id;
 
-    String authorId;
     String groupId;
-    String type;
     String content;
 
     List<String> media;
@@ -29,5 +27,5 @@ public class PostResponse {
 
     List<String> likes;
     Integer commentsCount;
-    OneUserProfileResponse authorProfile;
+    OneUserProfileResponse.UserProfileOne authorProfile;
 }
