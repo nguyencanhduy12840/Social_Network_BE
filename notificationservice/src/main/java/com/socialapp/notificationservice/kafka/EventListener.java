@@ -22,6 +22,7 @@ public class EventListener {
     switch (baseEvent.getSourceService()) {
         case "ProfileService" -> notificationService.handleFriendshipEvent(baseEvent);
         case "PostService" -> notificationService.handlePostEvent(baseEvent);
+        case "CommentService" -> notificationService.handleCommentEvent(baseEvent);
         default -> log.warn("Unknown source: {}", baseEvent.getSourceService());
     }
 }

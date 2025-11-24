@@ -2,6 +2,7 @@ package com.socialapp.notificationservice.service;
 
 import java.time.Instant;
 
+import com.socialapp.notificationservice.dto.CommentEventDTO;
 import org.modelmapper.ModelMapper;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
@@ -54,6 +55,21 @@ public class NotificationService {
 
         notificationRepository.save(notification);
 
+        // Push realtime
+        messagingTemplate.convertAndSend("/topic/notifications/" + eventDTO.getReceiverId(), notification);
+    }
+
+    public void handleCommentEvent(BaseEvent event){
+        CommentEventDTO eventDTO = modelMapper.map(event.getPayload(), CommentEventDTO.class);
+        Notification notification = Notification.builder()
+                .senderId(eventDTO.getAuthorId())
+                .receiverId(eventDTO.getReceiverId())
+                .type(eventDTO.getEventType())
+                .message(eventDTO.getContent())
+                .isRead(false)
+                .createdAt(Instant.now())
+                .build();
+        notificationRepository.save(notification);
         // Push realtime
         messagingTemplate.convertAndSend("/topic/notifications/" + eventDTO.getReceiverId(), notification);
     }

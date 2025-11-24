@@ -1,11 +1,16 @@
 package com.socialapp.postservice.service;
 
 import com.socialapp.postservice.dto.request.BaseEvent;
+import com.socialapp.postservice.dto.request.CommentEvent;
 import com.socialapp.postservice.dto.request.CreateCommentRequest;
 import com.socialapp.postservice.dto.request.UpdateCommentRequest;
+import com.socialapp.postservice.dto.response.OneUserProfileResponse;
+import com.socialapp.postservice.dto.response.PostResponse;
 import com.socialapp.postservice.entity.Comment;
+import com.socialapp.postservice.entity.Post;
 import com.socialapp.postservice.mapper.CommentConverter;
 import com.socialapp.postservice.repository.CommentRepository;
+import com.socialapp.postservice.repository.httpclient.ProfileClient;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
@@ -21,14 +26,19 @@ public class CommentService {
     private final CloudinaryService cloudinaryService;
     private final CommentConverter commentConverter;
 
+    private final ProfileClient profileClient;
+
     private final String NOTIFICATION_TOPIC = "notification-events";
+    private final PostService postService;
 
     public CommentService(CommentRepository commentRepository, KafkaTemplate<String, BaseEvent> kafkaTemplate,
-                          CloudinaryService cloudinaryService, CommentConverter commentConverter) {
+                          CloudinaryService cloudinaryService, CommentConverter commentConverter, ProfileClient profileClient, PostService postService) {
+        this.profileClient = profileClient;
         this.commentConverter = commentConverter;
         this.cloudinaryService = cloudinaryService;
         this.kafkaTemplate = kafkaTemplate;
         this.commentRepository = commentRepository;
+        this.postService = postService;
     }
 
     public Comment addComment(CreateCommentRequest comment, MultipartFile[] mediaFiles) {
@@ -50,7 +60,70 @@ public class CommentService {
         }
         Comment newComment = commentConverter.toComment(comment);
         newComment.setMedia(mediaUrls);
-        return commentRepository.save(newComment);
+        Comment savedComment = commentRepository.save(newComment);
+        if(savedComment.getParentCommentId() != null) {
+            String peopleReply = profileClient.getUserProfile(
+                    savedComment.getAuthorId()
+            ).getData().getUsername();
+            CommentEvent commentEventToParent = CommentEvent.builder()
+                    .commentId(savedComment.getId())
+                    .postId(savedComment.getPostId())
+                    .authorId(savedComment.getAuthorId())
+                    .receiverId(savedComment.getParentCommentId())
+                    .eventType("REPLY_COMMENT")
+                    .content(peopleReply + "replied to your comment")
+                    .build();
+
+            PostResponse post = postService.getPostById(savedComment.getPostId());
+
+            CommentEvent commentEventToPostOwner = CommentEvent.builder()
+                    .commentId(savedComment.getId())
+                    .postId(savedComment.getPostId())
+                    .authorId(savedComment.getAuthorId())
+                    .receiverId(post.getAuthorProfile().getId())
+                    .eventType("COMMENT_ON_POST")
+                    .content(peopleReply + "commented on your post")
+                    .build();
+
+            BaseEvent baseEventParent = BaseEvent.builder()
+                    .eventType("REPLY_COMMENT")
+                            .sourceService("CommentService")
+                    .payload(commentEventToParent).build();
+
+            kafkaTemplate.send(NOTIFICATION_TOPIC, baseEventParent);
+
+            BaseEvent baseEventPostOwner = BaseEvent.builder()
+                    .eventType("COMMENT_ON_POST")
+                            .sourceService("CommentService")
+                    .payload(commentEventToPostOwner).build();
+
+            kafkaTemplate.send(NOTIFICATION_TOPIC, baseEventPostOwner);
+        }
+        else{
+            String peopleComment = profileClient.getUserProfile(
+                    savedComment.getAuthorId()
+            ).getData().getUsername();
+            PostResponse post = postService.getPostById(savedComment.getPostId());
+
+            CommentEvent commentEventToPostOwner = CommentEvent.builder()
+                    .commentId(savedComment.getId())
+                    .postId(savedComment.getPostId())
+                    .authorId(savedComment.getAuthorId())
+                    .receiverId(post.getAuthorProfile().getId())
+                    .eventType("COMMENT_ON_POST")
+                    .content(peopleComment + " commented on your post")
+                    .build();
+
+            BaseEvent baseEvent = BaseEvent.builder()
+                    .eventType("COMMENT_ON_POST")
+                            .sourceService("CommentService")
+                    .payload(commentEventToPostOwner).build();
+
+            kafkaTemplate.send(NOTIFICATION_TOPIC, baseEvent);
+
+        }
+
+        return savedComment;
     }
 
     public List<Comment> getCommentsByPostId(String postId) {
