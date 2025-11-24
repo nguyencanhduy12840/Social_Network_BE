@@ -173,11 +173,34 @@ public class CommentService {
 
     public Comment handleLikeAndDislike(String commentId, String userId) {
         Comment comment = getCommentById(commentId);
+        boolean isLiked = false;
         if (comment.getLikes().contains(userId)) {
             comment.getLikes().remove(userId);
+            isLiked = true;
         } else {
             comment.getLikes().add(userId);
         }
-        return commentRepository.save(comment);
+        Comment savedComment = commentRepository.save(comment);
+        if(!isLiked) {
+            String peopleLike = profileClient.getUserProfile(
+                    userId
+            ).getData().getUsername();
+            CommentEvent commentEvent = CommentEvent.builder()
+                    .commentId(savedComment.getId())
+                    .postId(savedComment.getPostId())
+                    .authorId(userId)
+                    .receiverId(savedComment.getAuthorId())
+                    .eventType("LIKE_COMMENT")
+                    .content(peopleLike + " liked your comment")
+                    .build();
+
+            BaseEvent baseEvent = BaseEvent.builder()
+                    .eventType("LIKE_COMMENT")
+                            .sourceService("CommentService")
+                    .payload(commentEvent).build();
+
+            kafkaTemplate.send(NOTIFICATION_TOPIC, baseEvent);
+        }
+        return savedComment;
     }
 }
