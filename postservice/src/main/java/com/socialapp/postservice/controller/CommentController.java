@@ -53,4 +53,9 @@ public class CommentController {
                                                  @RequestPart(value = "media", required = false) MultipartFile[] mediaFiles){
         return ResponseEntity.ok(commentService.updateComment(updateCommentRequest, mediaFiles));
     }
+
+    @PutMapping("/like/{commentId}")
+    public ResponseEntity<Comment> likeComment(@PathVariable String commentId, @RequestParam String userId){
+        return ResponseEntity.ok(commentService.handleLikeAndDislike(commentId, userId));
+    }
 }

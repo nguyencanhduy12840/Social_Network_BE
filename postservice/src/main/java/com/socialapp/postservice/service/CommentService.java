@@ -97,4 +97,14 @@ public class CommentService {
         }
         return null;
     }
+
+    public Comment handleLikeAndDislike(String commentId, String userId) {
+        Comment comment = getCommentById(commentId);
+        if (comment.getLikes().contains(userId)) {
+            comment.getLikes().remove(userId);
+        } else {
+            comment.getLikes().add(userId);
+        }
+        return commentRepository.save(comment);
+    }
 }
