@@ -43,6 +43,7 @@ public class SecurityConfig {
                 "/update-post",
                 "/unlike-post",
                 "/delete-post/**",
+                "/*",
                "/internal/**",
                 "/comments/**"
         };
