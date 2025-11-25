@@ -174,6 +174,11 @@ public class CommentService {
     public Comment handleLikeAndDislike(String commentId, String userId) {
         Comment comment = getCommentById(commentId);
         boolean isLiked = false;
+        
+        if (comment.getLikes() == null) {
+            comment.setLikes(new ArrayList<>());
+        }
+        
         if (comment.getLikes().contains(userId)) {
             comment.getLikes().remove(userId);
             isLiked = true;

@@ -6,6 +6,7 @@ import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.mapping.Document;
 
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.List;
 
 @Data
@@ -32,5 +33,6 @@ public class Comment {
 
     String parentCommentId;
 
-    List<String> likes;
+    @Builder.Default
+    List<String> likes = new ArrayList<>();
 }

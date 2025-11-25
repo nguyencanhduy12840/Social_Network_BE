@@ -3,6 +3,7 @@ package com.socialapp.postservice.controller;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.socialapp.postservice.dto.request.CreateCommentRequest;
+import com.socialapp.postservice.dto.request.LikeCommentRequest;
 import com.socialapp.postservice.dto.request.UpdateCommentRequest;
 import com.socialapp.postservice.entity.Comment;
 import com.socialapp.postservice.exception.NotFoundException;
@@ -54,8 +55,8 @@ public class CommentController {
         return ResponseEntity.ok(commentService.updateComment(updateCommentRequest, mediaFiles));
     }
 
-    @PutMapping("/like/{commentId}")
-    public ResponseEntity<Comment> likeComment(@PathVariable String commentId, @RequestParam String userId){
-        return ResponseEntity.ok(commentService.handleLikeAndDislike(commentId, userId));
+    @PostMapping("/like")
+    public ResponseEntity<Comment> likeComment(@RequestBody LikeCommentRequest likeCommentRequest){
+        return ResponseEntity.ok(commentService.handleLikeAndDislike(likeCommentRequest.getCommentId(), likeCommentRequest.getUserId()));
     }
 }
