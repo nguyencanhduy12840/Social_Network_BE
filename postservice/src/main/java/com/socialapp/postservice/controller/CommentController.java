@@ -49,9 +49,14 @@ public class CommentController {
         return ResponseEntity.ok("Comment deleted successfully");
     }
 
-    @PutMapping("/{commentId}")
-    public ResponseEntity<Comment> updateComment(@RequestPart("comment")UpdateCommentRequest updateCommentRequest,
-                                                 @RequestPart(value = "media", required = false) MultipartFile[] mediaFiles){
+    @PutMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<Comment> updateComment(
+            @RequestPart("comment") String requestJson,
+            @RequestPart(value = "media", required = false) MultipartFile[] mediaFiles) throws JsonProcessingException {
+
+        ObjectMapper mapper = new ObjectMapper();
+        UpdateCommentRequest updateCommentRequest = mapper.readValue(requestJson, UpdateCommentRequest.class);
+
         return ResponseEntity.ok(commentService.updateComment(updateCommentRequest, mediaFiles));
     }
 
