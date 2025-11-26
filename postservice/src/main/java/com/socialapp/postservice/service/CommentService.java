@@ -11,6 +11,7 @@ import com.socialapp.postservice.entity.Comment;
 import com.socialapp.postservice.entity.Post;
 import com.socialapp.postservice.mapper.CommentConverter;
 import com.socialapp.postservice.repository.CommentRepository;
+import com.socialapp.postservice.repository.PostRepository;
 import com.socialapp.postservice.repository.httpclient.ProfileClient;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Service;
@@ -31,15 +32,18 @@ public class CommentService {
 
     private final String NOTIFICATION_TOPIC = "notification-events";
     private final PostService postService;
+    private final PostRepository postRepository;
 
     public CommentService(CommentRepository commentRepository, KafkaTemplate<String, BaseEvent> kafkaTemplate,
-                          CloudinaryService cloudinaryService, CommentConverter commentConverter, ProfileClient profileClient, PostService postService) {
+                          CloudinaryService cloudinaryService, CommentConverter commentConverter,
+                          ProfileClient profileClient, PostService postService, PostRepository postRepository) {
         this.profileClient = profileClient;
         this.commentConverter = commentConverter;
         this.cloudinaryService = cloudinaryService;
         this.kafkaTemplate = kafkaTemplate;
         this.commentRepository = commentRepository;
         this.postService = postService;
+        this.postRepository = postRepository;
     }
 
     public Comment addComment(CreateCommentRequest comment, MultipartFile[] mediaFiles) {
@@ -74,7 +78,9 @@ public class CommentService {
                     .eventType("REPLY_COMMENT")
                     .content(peopleReply + "replied to your comment")
                     .build();
-
+            Post tempPost = postRepository.findById(savedComment.getPostId()).get();
+            tempPost.setCommentsCount(tempPost.getCommentsCount() + 1);
+            postRepository.save(tempPost);
             PostResponse post = postService.getPostById(savedComment.getPostId());
 
             CommentEvent commentEventToPostOwner = CommentEvent.builder()
@@ -105,6 +111,10 @@ public class CommentService {
                     savedComment.getAuthorId()
             ).getData().getUsername();
             PostResponse post = postService.getPostById(savedComment.getPostId());
+
+            Post tempPost = postRepository.findById(savedComment.getPostId()).get();
+            tempPost.setCommentsCount(tempPost.getCommentsCount() + 1);
+            postRepository.save(tempPost);
 
             CommentEvent commentEventToPostOwner = CommentEvent.builder()
                     .commentId(savedComment.getId())
@@ -144,6 +154,9 @@ public class CommentService {
         if (comment.isEmpty()) {
             throw new RuntimeException("Comment not found");
         }
+        Post post = postRepository.findById(comment.get().getPostId()).get();
+        post.setCommentsCount(post.getCommentsCount() - 1);
+        postRepository.save(post);
         commentRepository.deleteById(commentId);
     }
 

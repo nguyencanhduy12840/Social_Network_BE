@@ -9,6 +9,7 @@ import java.util.Optional;
 import com.socialapp.postservice.dto.request.UpdatePostRequest;
 import com.socialapp.postservice.dto.response.OneUserProfileResponse;
 import com.socialapp.postservice.dto.response.PostResponse;
+import com.socialapp.postservice.entity.Comment;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
@@ -36,9 +37,14 @@ public class PostService {
     private final KafkaTemplate<String, BaseEvent> kafkaTemplate;
     private final ProfileClient profileClient;
 
+    private final CommentService commentService;
+
     private final String NOTIFICATION_TOPIC = "notification-events";
 
-    public PostService(PostRepository postRepository, PostConverter postConverter, CloudinaryService cloudinaryService, KafkaTemplate<String, BaseEvent> kafkaTemplate, ProfileClient profileClient) {
+    public PostService(PostRepository postRepository, PostConverter postConverter,
+                       CloudinaryService cloudinaryService, KafkaTemplate<String, BaseEvent> kafkaTemplate,
+                       ProfileClient profileClient, CommentService commentService) {
+        this.commentService = commentService;
         this.postRepository = postRepository;
         this.postConverter = postConverter;
         this.cloudinaryService = cloudinaryService;
