@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.socialapp.postservice.dto.request.CreateCommentRequest;
 import com.socialapp.postservice.dto.request.LikeCommentRequest;
 import com.socialapp.postservice.dto.request.UpdateCommentRequest;
+import com.socialapp.postservice.dto.response.CommentResponse;
 import com.socialapp.postservice.entity.Comment;
 import com.socialapp.postservice.exception.NotFoundException;
 import com.socialapp.postservice.service.CommentService;
@@ -36,8 +37,8 @@ public class CommentController {
     }
 
     @GetMapping("/{postId}")
-    public ResponseEntity<List<Comment>> getComments(@PathVariable String postId) {
-        return ResponseEntity.ok(commentService.getCommentsByPostId(postId.toString()));
+    public ResponseEntity<List<CommentResponse>> getComments(@PathVariable String postId) {
+        return ResponseEntity.ok(commentService.getCommentsByPostId(postId));
     }
 
     @DeleteMapping("/{commentId}")

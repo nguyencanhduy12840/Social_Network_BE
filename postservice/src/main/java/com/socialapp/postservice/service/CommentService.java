@@ -4,6 +4,7 @@ import com.socialapp.postservice.dto.request.BaseEvent;
 import com.socialapp.postservice.dto.request.CommentEvent;
 import com.socialapp.postservice.dto.request.CreateCommentRequest;
 import com.socialapp.postservice.dto.request.UpdateCommentRequest;
+import com.socialapp.postservice.dto.response.CommentResponse;
 import com.socialapp.postservice.dto.response.OneUserProfileResponse;
 import com.socialapp.postservice.dto.response.PostResponse;
 import com.socialapp.postservice.entity.Comment;
@@ -126,8 +127,16 @@ public class CommentService {
         return savedComment;
     }
 
-    public List<Comment> getCommentsByPostId(String postId) {
-        return commentRepository.findByPostId(postId);
+    public List<CommentResponse> getCommentsByPostId(String postId) {
+        List<CommentResponse> comments = new ArrayList<>();
+        List<Comment> commentList = commentRepository.findByPostId(postId);
+        for (Comment comment : commentList) {
+            OneUserProfileResponse authorProfile = profileClient.getUserProfile(comment.getAuthorId());
+            CommentResponse commentResponse = commentConverter.toCommentResponse(comment);
+            commentResponse.setAuthorProfile(authorProfile.getData());
+            comments.add(commentResponse);
+        }
+        return comments;
     }
 
     public void deleteComment(String commentId) {
@@ -165,7 +174,13 @@ public class CommentService {
             }
         }
         if(getCommentById(updatedComment.getId()) != null) {
+            Comment oldComment = getCommentById(updatedComment.getId());
             updatedComment.setMedia(mediaUrls);
+            updatedComment.setParentCommentId(oldComment.getParentCommentId());
+            updatedComment.setPostId(oldComment.getPostId());
+            updatedComment.setAuthorId(oldComment.getAuthorId());
+            updatedComment.setCreatedAt(oldComment.getCreatedAt());
+            updatedComment.setLikes(oldComment.getLikes());
             return commentRepository.save(updatedComment);
         }
         return null;
