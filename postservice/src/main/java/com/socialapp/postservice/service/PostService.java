@@ -37,14 +37,11 @@ public class PostService {
     private final KafkaTemplate<String, BaseEvent> kafkaTemplate;
     private final ProfileClient profileClient;
 
-    private final CommentService commentService;
-
     private final String NOTIFICATION_TOPIC = "notification-events";
 
     public PostService(PostRepository postRepository, PostConverter postConverter,
                        CloudinaryService cloudinaryService, KafkaTemplate<String, BaseEvent> kafkaTemplate,
-                       ProfileClient profileClient, CommentService commentService) {
-        this.commentService = commentService;
+                       ProfileClient profileClient) {
         this.postRepository = postRepository;
         this.postConverter = postConverter;
         this.cloudinaryService = cloudinaryService;
