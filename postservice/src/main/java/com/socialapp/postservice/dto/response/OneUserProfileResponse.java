@@ -17,16 +17,16 @@ public class OneUserProfileResponse {
     @Data
     public static class UserProfileOne {
         String id;
-
         String userId;
 
         String email;
         String firstName;
         String lastName;
-
         String username;
+
         String avatarUrl;
         String gender;
+        String friendStatus;
         LocalDate dob;
     }
 }

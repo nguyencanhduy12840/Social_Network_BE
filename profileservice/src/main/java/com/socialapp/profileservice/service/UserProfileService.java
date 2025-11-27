@@ -14,7 +14,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
@@ -107,7 +106,20 @@ public class UserProfileService {
                 userProfileRepository.findById(id)
                         .orElseThrow(() -> new RuntimeException("Profile not found"));
 
-        return userProfileMapper.toUserProfileResponse(userProfile);
+        Optional<String> currentUserId = SecurityUtil.getCurrentUserLogin();
+
+        UserProfileResponse userProfileResponse =
+                userProfileMapper.toUserProfileResponse(userProfile);
+
+        if (currentUserId.isPresent() && currentUserId.get().equals(id)) {
+            userProfileResponse.setFriendStatus("SELF");
+        } else {
+            String currentId = currentUserId.orElse(null);
+            String friendshipStatus = determineFriendStatus(currentId, id);
+            userProfileResponse.setFriendStatus(friendshipStatus);
+        }
+
+        return userProfileResponse;
     }
 
     public UserProfile updateProfile(UpdateUserProfileRequest request, MultipartFile mediaFile){
