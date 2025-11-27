@@ -1,6 +1,7 @@
 package com.socialapp.postservice.controller;
 
 import com.socialapp.postservice.dto.request.UpdatePostRequest;
+import com.socialapp.postservice.dto.response.OneUserProfileResponse;
 import com.socialapp.postservice.dto.response.PostResponse;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -89,4 +90,13 @@ public class PostController {
         }
         return ResponseEntity.ok(post);
      }
+
+     @GetMapping("/userlikes/{postId}")
+    public ResponseEntity<List<OneUserProfileResponse.UserProfileOne>> getUsersWhoLikedPost(@PathVariable String postId) {
+        List<OneUserProfileResponse.UserProfileOne> users = postService.getUserLikePost(postId);
+        if (users == null) {
+            throw new NotFoundException("Post not found");
+        }
+        return ResponseEntity.ok(users);
+    }
 }

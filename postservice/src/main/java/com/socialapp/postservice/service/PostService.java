@@ -37,14 +37,11 @@ public class PostService {
     private final KafkaTemplate<String, BaseEvent> kafkaTemplate;
     private final ProfileClient profileClient;
 
-    private final CommentService commentService;
-
     private final String NOTIFICATION_TOPIC = "notification-events";
 
     public PostService(PostRepository postRepository, PostConverter postConverter,
                        CloudinaryService cloudinaryService, KafkaTemplate<String, BaseEvent> kafkaTemplate,
-                       ProfileClient profileClient, CommentService commentService) {
-        this.commentService = commentService;
+                       ProfileClient profileClient) {
         this.postRepository = postRepository;
         this.postConverter = postConverter;
         this.cloudinaryService = cloudinaryService;
@@ -238,6 +235,21 @@ public class PostService {
             OneUserProfileResponse authorProfile = profileClient.getUserProfile(currentPost.getAuthorId());
             postResponse.setAuthorProfile(authorProfile.getData());
             return postResponse;
+        }
+        return null;
+     }
+
+     public List<OneUserProfileResponse.UserProfileOne> getUserLikePost(String postId){
+        Optional<Post> post = postRepository.findById(postId);
+        if(post.isPresent()){
+            Post currentPost = post.get();
+            List<String> likeUserIds = currentPost.getLikes();
+            List<OneUserProfileResponse.UserProfileOne> likeUsers = new ArrayList<>();
+            for(String userId : likeUserIds){
+                OneUserProfileResponse authorProfile = profileClient.getUserProfile(userId);
+                likeUsers.add(authorProfile.getData());
+            }
+            return likeUsers;
         }
         return null;
      }
