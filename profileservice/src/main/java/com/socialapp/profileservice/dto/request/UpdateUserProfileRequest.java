@@ -16,7 +16,6 @@ public class UpdateUserProfileRequest {
     String firstName;
     String lastName;
     String username;
-    String avatarUrl;
     String bio;
     String gender;
     LocalDate dob;

@@ -76,7 +76,7 @@ public class CommentService {
                     .authorId(savedComment.getAuthorId())
                     .receiverId(savedComment.getParentCommentId())
                     .eventType("REPLY_COMMENT")
-                    .content(peopleReply + "replied to your comment")
+                    .content(peopleReply + " replied to your comment")
                     .build();
             Post tempPost = postRepository.findById(savedComment.getPostId()).get();
             tempPost.setCommentsCount(tempPost.getCommentsCount() + 1);
@@ -89,7 +89,7 @@ public class CommentService {
                     .authorId(savedComment.getAuthorId())
                     .receiverId(post.getAuthorProfile().getId())
                     .eventType("COMMENT_ON_POST")
-                    .content(peopleReply + "commented on your post")
+                    .content(peopleReply + " commented on your post")
                     .build();
 
             BaseEvent baseEventParent = BaseEvent.builder()
