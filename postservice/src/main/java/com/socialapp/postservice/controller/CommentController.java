@@ -26,7 +26,7 @@ public class CommentController {
     }
 
     @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    public ResponseEntity<Comment> createComment(
+    public ResponseEntity<CommentResponse> createComment(
             @RequestPart("comment") String requestJson,
             @RequestPart(value = "media", required = false) MultipartFile[] mediaFiles) throws JsonProcessingException {
 
@@ -51,7 +51,7 @@ public class CommentController {
     }
 
     @PutMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    public ResponseEntity<Comment> updateComment(
+    public ResponseEntity<CommentResponse> updateComment(
             @RequestPart("comment") String requestJson,
             @RequestPart(value = "media", required = false) MultipartFile[] mediaFiles) throws JsonProcessingException {
 
