@@ -1,6 +1,7 @@
 package com.socialapp.profileservice.service;
 
 import com.socialapp.profileservice.dto.request.ProfileCreationRequest;
+import com.socialapp.profileservice.dto.request.UpdateUserProfileRequest;
 import com.socialapp.profileservice.dto.response.UserProfileResponse;
 import com.socialapp.profileservice.entity.UserProfile;
 import com.socialapp.profileservice.mapper.UserProfileConverter;
@@ -103,5 +104,35 @@ public class UserProfileService {
                         .orElseThrow(() -> new RuntimeException("Profile not found"));
 
         return userProfileMapper.toUserProfileResponse(userProfile);
+    }
+
+    public UserProfile updateProfile(UpdateUserProfileRequest request){
+        UserProfile userProfile =
+                userProfileRepository.findByUserId(request.getUserId())
+                        .orElseThrow(() -> new RuntimeException("Profile not found"));
+
+        if(request.getFirstName() != null){
+            userProfile.setFirstName(request.getFirstName());
+        }
+        if(request.getLastName() != null){
+            userProfile.setLastName(request.getLastName());
+        }
+        if(request.getUsername() != null){
+            userProfile.setUsername(request.getUsername());
+        }
+        if(request.getAvatarUrl() != null){
+            userProfile.setAvatarUrl(request.getAvatarUrl());
+        }
+        if(request.getBio() != null){
+            userProfile.setBio(request.getBio());
+        }
+        if(request.getGender() != null){
+            userProfile.setGender(request.getGender());
+        }
+        if(request.getDob() != null){
+            userProfile.setDob(request.getDob());
+        }
+
+        return userProfileRepository.save(userProfile);
     }
 }

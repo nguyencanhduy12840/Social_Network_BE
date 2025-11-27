@@ -12,6 +12,7 @@ import java.time.LocalDate;
 @AllArgsConstructor
 @NoArgsConstructor
 public class UpdateUserProfileRequest {
+    String userId;
     String firstName;
     String lastName;
     String username;
