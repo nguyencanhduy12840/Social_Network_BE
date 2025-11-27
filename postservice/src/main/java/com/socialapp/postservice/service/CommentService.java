@@ -158,6 +158,11 @@ public class CommentService {
             throw new RuntimeException("Comment not found");
         }
         Post post = postRepository.findById(comment.get().getPostId()).get();
+        List<Comment> replies = commentRepository.findByParentCommentId(commentId);
+        for (Comment reply : replies) {
+            commentRepository.deleteById(reply.getId());
+            post.setCommentsCount(post.getCommentsCount() - 1);
+        }
         post.setCommentsCount(post.getCommentsCount() - 1);
         postRepository.save(post);
         commentRepository.deleteById(commentId);
