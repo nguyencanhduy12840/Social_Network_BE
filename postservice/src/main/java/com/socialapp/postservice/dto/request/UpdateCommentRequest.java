@@ -6,7 +6,6 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 import java.time.Instant;
-import java.util.List;
 
 @Getter
 @Setter
@@ -15,6 +14,5 @@ import java.util.List;
 public class UpdateCommentRequest {
     private String commentId;
     private String content;
-    private List<String> media;
     private Instant updatedAt;
 }

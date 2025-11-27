@@ -46,7 +46,7 @@ public class CommentService {
         this.postRepository = postRepository;
     }
 
-    public Comment addComment(CreateCommentRequest comment, MultipartFile[] mediaFiles) {
+    public CommentResponse addComment(CreateCommentRequest comment, MultipartFile[] mediaFiles) {
         List<String> mediaUrls = new ArrayList<>();
 
         if (mediaFiles != null && mediaFiles.length > 0) {
@@ -106,10 +106,9 @@ public class CommentService {
 
             kafkaTemplate.send(NOTIFICATION_TOPIC, baseEventPostOwner);
         }
-        else{
+        else {
             String peopleComment = profileClient.getUserProfile(
-                    savedComment.getAuthorId()
-            ).getData().getUsername();
+                    savedComment.getAuthorId()).getData().getUsername();
             PostResponse post = postService.getPostById(savedComment.getPostId());
 
             Post tempPost = postRepository.findById(savedComment.getPostId()).get();
@@ -127,14 +126,18 @@ public class CommentService {
 
             BaseEvent baseEvent = BaseEvent.builder()
                     .eventType("COMMENT_ON_POST")
-                            .sourceService("CommentService")
+                    .sourceService("CommentService")
                     .payload(commentEventToPostOwner).build();
 
             kafkaTemplate.send(NOTIFICATION_TOPIC, baseEvent);
 
         }
 
-        return savedComment;
+        CommentResponse finalComment = commentConverter.toCommentResponse(savedComment);
+        OneUserProfileResponse authorProfile = profileClient.getUserProfile(comment.getAuthorId());
+        finalComment.setAuthorProfile(authorProfile.getData());
+
+        return finalComment;
     }
 
     public List<CommentResponse> getCommentsByPostId(String postId) {
@@ -168,7 +171,7 @@ public class CommentService {
         return comment.get();
     }
 
-    public Comment updateComment(UpdateCommentRequest comment, MultipartFile[] mediaFiles) {
+    public CommentResponse updateComment(UpdateCommentRequest comment, MultipartFile[] mediaFiles) {
         Comment updatedComment = commentConverter.toCommentFromUpdate(comment);
         List<String> mediaUrls = new ArrayList<>();
 
@@ -194,7 +197,14 @@ public class CommentService {
             updatedComment.setAuthorId(oldComment.getAuthorId());
             updatedComment.setCreatedAt(oldComment.getCreatedAt());
             updatedComment.setLikes(oldComment.getLikes());
-            return commentRepository.save(updatedComment);
+
+            commentRepository.save(updatedComment);
+            
+            CommentResponse finalComment = commentConverter.toCommentResponse(updatedComment);
+            OneUserProfileResponse authorProfile = profileClient.getUserProfile(updatedComment.getAuthorId());
+            finalComment.setAuthorProfile(authorProfile.getData());
+
+            return finalComment;
         }
         return null;
     }
