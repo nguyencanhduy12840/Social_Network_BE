@@ -12,7 +12,7 @@ import lombok.NoArgsConstructor;
 public class PostEvent {
     String postId;
     String authorId;
-    String content;
+    String groupId;
     String eventType;
     String receiverId;
 }

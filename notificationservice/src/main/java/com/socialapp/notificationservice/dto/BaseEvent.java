@@ -12,5 +12,5 @@ import lombok.NoArgsConstructor;
 public class BaseEvent {
     private String eventType;     
     private String sourceService; 
-    private Object payload;       
+    private Object payload;
 }

@@ -67,16 +67,14 @@ public class CommentService {
         newComment.setMedia(mediaUrls);
         Comment savedComment = commentRepository.save(newComment);
         if(savedComment.getParentCommentId() != null) {
-            String peopleReply = profileClient.getUserProfile(
-                    savedComment.getAuthorId()
-            ).getData().getUsername();
+
             CommentEvent commentEventToParent = CommentEvent.builder()
                     .commentId(savedComment.getId())
                     .postId(savedComment.getPostId())
                     .authorId(savedComment.getAuthorId())
                     .receiverId(savedComment.getParentCommentId())
+                    .groupId("")
                     .eventType("REPLY_COMMENT")
-                    .content(peopleReply + "replied to your comment")
                     .build();
             Post tempPost = postRepository.findById(savedComment.getPostId()).get();
             tempPost.setCommentsCount(tempPost.getCommentsCount() + 1);
@@ -88,8 +86,8 @@ public class CommentService {
                     .postId(savedComment.getPostId())
                     .authorId(savedComment.getAuthorId())
                     .receiverId(post.getAuthorProfile().getId())
+                    .groupId("")
                     .eventType("COMMENT_ON_POST")
-                    .content(peopleReply + "commented on your post")
                     .build();
 
             BaseEvent baseEventParent = BaseEvent.builder()
@@ -107,8 +105,6 @@ public class CommentService {
             kafkaTemplate.send(NOTIFICATION_TOPIC, baseEventPostOwner);
         }
         else {
-            String peopleComment = profileClient.getUserProfile(
-                    savedComment.getAuthorId()).getData().getUsername();
             PostResponse post = postService.getPostById(savedComment.getPostId());
 
             Post tempPost = postRepository.findById(savedComment.getPostId()).get();
@@ -120,8 +116,8 @@ public class CommentService {
                     .postId(savedComment.getPostId())
                     .authorId(savedComment.getAuthorId())
                     .receiverId(post.getAuthorProfile().getId())
+                    .groupId("")
                     .eventType("COMMENT_ON_POST")
-                    .content(peopleComment + " commented on your post")
                     .build();
 
             BaseEvent baseEvent = BaseEvent.builder()
@@ -237,9 +233,9 @@ public class CommentService {
                     .commentId(savedComment.getId())
                     .postId(savedComment.getPostId())
                     .authorId(userId)
+                    .groupId("")
                     .receiverId(savedComment.getAuthorId())
                     .eventType("LIKE_COMMENT")
-                    .content(peopleLike + " liked your comment")
                     .build();
 
             BaseEvent baseEvent = BaseEvent.builder()

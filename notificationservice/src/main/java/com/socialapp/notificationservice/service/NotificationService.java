@@ -31,7 +31,6 @@ public class NotificationService {
                 .senderId(dto.getSenderId())
                 .receiverId(dto.getReceiverId())
                 .type(dto.getType())
-                .message(dto.getMessage())
                 .isRead(false)
                 .createdAt(Instant.now())
                 .build();
@@ -48,7 +47,10 @@ public class NotificationService {
                 .senderId(eventDTO.getAuthorId())
                 .receiverId(eventDTO.getReceiverId())
                 .type(eventDTO.getEventType())
-                .message(eventDTO.getContent())
+                .extraData(Notification.ExtraData.builder()
+                        .postId(eventDTO.getPostId())
+                        .groupId(eventDTO.getGroupId())
+                        .build())
                 .isRead(false)
                 .createdAt(Instant.now())
                 .build();
@@ -65,7 +67,11 @@ public class NotificationService {
                 .senderId(eventDTO.getAuthorId())
                 .receiverId(eventDTO.getReceiverId())
                 .type(eventDTO.getEventType())
-                .message(eventDTO.getContent())
+                .extraData(Notification.ExtraData.builder()
+                        .commentId(eventDTO.getCommentId())
+                        .postId(eventDTO.getPostId())
+                        .groupId(eventDTO.getGroupId())
+                        .build())
                 .isRead(false)
                 .createdAt(Instant.now())
                 .build();

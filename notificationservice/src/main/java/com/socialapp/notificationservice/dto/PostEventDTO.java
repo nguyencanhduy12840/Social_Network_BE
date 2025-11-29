@@ -12,7 +12,7 @@ import lombok.Setter;
 public class PostEventDTO {
     String postId;
     String authorId;
-    String content;
+    String groupId;
     String eventType;
     String receiverId;
 }

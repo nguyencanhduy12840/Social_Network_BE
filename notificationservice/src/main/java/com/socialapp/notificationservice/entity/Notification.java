@@ -22,8 +22,20 @@ public class Notification {
     private String id;
     private String receiverId;
     private String senderId;
-    private String message;
     private String type;
     private boolean isRead;
     private Instant createdAt;
+    private ExtraData extraData;
+
+    @Getter
+    @Setter
+    @AllArgsConstructor
+    @NoArgsConstructor
+    @Builder
+    public static class ExtraData {
+        private String postId;
+        private String storyId;
+        private String commentId;
+        private String groupId;
+    }
 }

@@ -11,7 +11,7 @@ public class CommentEvent {
     String commentId;
     String postId;
     String authorId;
-    String content;
+    String groupId;
     String eventType;
     String receiverId;
 }

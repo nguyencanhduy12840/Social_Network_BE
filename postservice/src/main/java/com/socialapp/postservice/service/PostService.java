@@ -89,12 +89,12 @@ public class PostService {
             UserProfile friends = profileClient.getFriends(userId);
             friends.getData().parallelStream().forEach(friend-> {
                 PostEvent event = PostEvent.builder()
-                                .postId(savedPost.getId())
-                                .authorId(userId)
-                                .content(content)
-                                .eventType("NEW_POST")
-                                .receiverId(friend.getUserId())
-                                .build();
+                        .postId(savedPost.getId())
+                        .authorId(userId)
+                        .groupId("")
+                        .eventType("NEW_POST")
+                        .receiverId(friend.getUserId())
+                        .build();
 
                             BaseEvent baseEvent = BaseEvent.builder()
                                 .eventType("NEW_POST")

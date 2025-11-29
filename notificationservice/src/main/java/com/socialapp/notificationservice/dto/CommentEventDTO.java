@@ -13,7 +13,7 @@ public class CommentEventDTO {
     String commentId;
     String postId;
     String authorId;
-    String content;
+    String groupId;
     String eventType;
     String receiverId;
 }
