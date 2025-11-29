@@ -37,15 +37,16 @@ public class SecurityConfig {
     public SecurityFilterChain filterChain(HttpSecurity http
     ) throws Exception {
         String[] whiteList = {
-               "/create-post",
-               "/like-post",
+                "/*",
+                "/create-post",
+                "/like-post",
                 "/get-post",
                 "/update-post",
                 "/unlike-post",
                 "/delete-post/**",
-                "/*",
-               "/internal/**",
-                "/comments/**"
+                "/internal/**",
+                "/comments/**",
+                "/userlikes/**"
         };
         http
                 .csrf(c -> c.disable())

@@ -12,6 +12,7 @@ import com.socialapp.profileservice.util.SecurityUtil;
 
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 import java.util.Optional;
@@ -23,12 +24,14 @@ public class UserProfileService {
     private final UserProfileConverter userProfileMapper;
     private final FriendshipService friendshipService;
     private final PostClient postClient;
+    private final CloudinaryService cloudinaryService;
 
-    public UserProfileService(UserProfileRepository userProfileRepository, UserProfileConverter userProfileMapper, FriendshipService friendshipService, PostClient postClient) {
+    public UserProfileService(UserProfileRepository userProfileRepository, UserProfileConverter userProfileMapper, FriendshipService friendshipService, PostClient postClient, CloudinaryService cloudinaryService) {
         this.userProfileRepository = userProfileRepository;
         this.userProfileMapper = userProfileMapper;
         this.friendshipService = friendshipService;
         this.postClient = postClient;
+        this.cloudinaryService = cloudinaryService;
     }
 
     public UserProfileResponse createProfile(ProfileCreationRequest request) {
@@ -103,13 +106,32 @@ public class UserProfileService {
                 userProfileRepository.findById(id)
                         .orElseThrow(() -> new RuntimeException("Profile not found"));
 
-        return userProfileMapper.toUserProfileResponse(userProfile);
+        Optional<String> currentUserId = SecurityUtil.getCurrentUserLogin();
+
+        UserProfileResponse userProfileResponse =
+                userProfileMapper.toUserProfileResponse(userProfile);
+
+        if (currentUserId.isPresent() && currentUserId.get().equals(id)) {
+            userProfileResponse.setFriendStatus("SELF");
+        } else {
+            String currentId = currentUserId.orElse(null);
+            String friendshipStatus = determineFriendStatus(currentId, id);
+            userProfileResponse.setFriendStatus(friendshipStatus);
+        }
+
+        return userProfileResponse;
     }
 
-    public UserProfile updateProfile(UpdateUserProfileRequest request){
+    public UserProfile updateProfile(UpdateUserProfileRequest request, MultipartFile mediaFile){
         UserProfile userProfile =
                 userProfileRepository.findByUserId(request.getUserId())
                         .orElseThrow(() -> new RuntimeException("Profile not found"));
+
+        String mediaUrls="";
+        if ( mediaFile!= null) {
+            String url = cloudinaryService.uploadImage(mediaFile);
+            mediaUrls += url;
+        }
 
         if(request.getFirstName() != null){
             userProfile.setFirstName(request.getFirstName());
@@ -120,19 +142,17 @@ public class UserProfileService {
         if(request.getUsername() != null){
             userProfile.setUsername(request.getUsername());
         }
-        if(request.getAvatarUrl() != null){
-            userProfile.setAvatarUrl(request.getAvatarUrl());
-        }
         if(request.getBio() != null){
             userProfile.setBio(request.getBio());
         }
         if(request.getGender() != null){
             userProfile.setGender(request.getGender());
         }
-        if(request.getDob() != null){
+        if (request.getDob() != null) {
             userProfile.setDob(request.getDob());
         }
 
+        userProfile.setAvatarUrl(mediaUrls);
         return userProfileRepository.save(userProfile);
     }
 }

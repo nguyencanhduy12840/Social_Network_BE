@@ -6,16 +6,12 @@ import java.util.List;
 import java.util.Optional;
 
 
-import com.socialapp.postservice.dto.request.UpdatePostRequest;
 import com.socialapp.postservice.dto.response.OneUserProfileResponse;
 import com.socialapp.postservice.dto.response.PostResponse;
-import com.socialapp.postservice.entity.Comment;
 import org.springframework.kafka.core.KafkaTemplate;
-import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
-import com.nimbusds.jose.proc.SecurityContext;
 import com.socialapp.postservice.dto.request.BaseEvent;
 import com.socialapp.postservice.dto.request.LikePostRequest;
 import com.socialapp.postservice.dto.request.PostEvent;
