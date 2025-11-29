@@ -226,9 +226,6 @@ public class CommentService {
         }
         Comment savedComment = commentRepository.save(comment);
         if(!isLiked) {
-            String peopleLike = profileClient.getUserProfile(
-                    userId
-            ).getData().getUsername();
             CommentEvent commentEvent = CommentEvent.builder()
                     .commentId(savedComment.getId())
                     .postId(savedComment.getPostId())
