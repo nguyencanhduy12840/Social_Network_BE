@@ -3,6 +3,7 @@ package com.socialapp.postservice.controller;
 import com.socialapp.postservice.dto.request.UpdatePostRequest;
 import com.socialapp.postservice.dto.response.OneUserProfileResponse;
 import com.socialapp.postservice.dto.response.PostResponse;
+import com.socialapp.postservice.dto.response.PagedPostResponse;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -47,9 +48,11 @@ public class PostController {
     }
 
      @GetMapping("/get-post")
-     public ResponseEntity<List<PostResponse>> getPostDisplay(){
-        List<PostResponse> postList = postService.getPostOnMainScreen();
-        return ResponseEntity.ok().body(postList);
+     public ResponseEntity<PagedPostResponse> getPostDisplay(
+             @RequestParam(defaultValue = "0") int page,
+             @RequestParam(defaultValue = "10") int size){
+        PagedPostResponse pagedResponse = postService.getPostOnMainScreen(page, size);
+        return ResponseEntity.ok().body(pagedResponse);
      }
 
      @PostMapping("/update-post")

@@ -8,6 +8,10 @@ import java.util.Optional;
 
 import com.socialapp.postservice.dto.response.OneUserProfileResponse;
 import com.socialapp.postservice.dto.response.PostResponse;
+import com.socialapp.postservice.dto.response.PagedPostResponse;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
@@ -136,42 +140,50 @@ public class PostService {
         }
     }
 
-    public List<PostResponse> getPostOnMainScreen() {
+    public PagedPostResponse getPostOnMainScreen(int page, int size) {
         Optional<String> requestId = SecurityUtil.getCurrentUserLogin();
+        Pageable pageable = PageRequest.of(page, size,
+                org.springframework.data.domain.Sort.by(
+                        org.springframework.data.domain.Sort.Direction.DESC, "createdAt"
+                ));
+
+        Page<Post> postsPage;
+
         if (requestId.isPresent()) {
-            UserProfile friends = profileClient.getFriends(requestId.get());
+            String currentUserId = requestId.get();
 
-            List<String> friendIds = new ArrayList<>(
-                    friends.getData().stream()
-                            .map(UserProfile.UserProfileOne::getUserId)
-                            .toList()
-            );
+            // Lấy danh sách bạn bè
+            UserProfile friends = profileClient.getFriends(currentUserId);
+            List<String> friendIds = friends.getData().stream()
+                    .map(UserProfile.UserProfileOne::getUserId)
+                    .toList();
 
-            friendIds.add(requestId.get());
-
-            List<Post> posts = postRepository.findByAuthorIdInAndPrivacyInOrderByCreatedAtDesc(
-                    friendIds,
-                    List.of("PUBLIC", "FRIENDS")
-            );
-            List<PostResponse> postResponses = new ArrayList<>();
-            for(Post post : posts){
-                PostResponse postResponse = postConverter.convertToPostResponse(post);
-                OneUserProfileResponse authorProfile = profileClient.getUserProfile(post.getAuthorId());
-                postResponse.setAuthorProfile(authorProfile.getData());
-                postResponses.add(postResponse);
-            }
-            return postResponses;
+            // Sử dụng custom repository với MongoDB query - tối ưu hiệu năng
+            postsPage = postRepository.findPostsForMainScreen(currentUserId, friendIds, pageable);
         } else {
-            List<Post> posts = postRepository.findByPrivacyOrderByCreatedAtDesc("PUBLIC");
-            List<PostResponse> postResponses = new ArrayList<>();
-            for(Post post : posts){
-                PostResponse postResponse = postConverter.convertToPostResponse(post);
-                OneUserProfileResponse authorProfile = profileClient.getUserProfile(post.getAuthorId());
-                postResponse.setAuthorProfile(authorProfile.getData());
-                postResponses.add(postResponse);
-            }
-            return postResponses;
+            // Người dùng chưa đăng nhập - chỉ thấy PUBLIC
+            postsPage = postRepository.findByPrivacyOrderByCreatedAtDesc("PUBLIC", pageable);
         }
+
+        // Convert posts to response
+        List<PostResponse> postResponses = new ArrayList<>();
+        for (Post post : postsPage.getContent()) {
+            PostResponse postResponse = postConverter.convertToPostResponse(post);
+            OneUserProfileResponse authorProfile = profileClient.getUserProfile(post.getAuthorId());
+            postResponse.setAuthorProfile(authorProfile.getData());
+            postResponses.add(postResponse);
+        }
+
+        // Tạo PagedPostResponse với thông tin pagination đầy đủ
+        return PagedPostResponse.builder()
+                .posts(postResponses)
+                .currentPage(postsPage.getNumber())
+                .totalPages(postsPage.getTotalPages())
+                .totalElements(postsPage.getTotalElements())
+                .pageSize(postsPage.getSize())
+                .hasNext(postsPage.hasNext())
+                .hasPrevious(postsPage.hasPrevious())
+                .build();
     }
 
      public Post updatePost(String postId, String content, String privacy, MultipartFile[] mediaFiles) {
