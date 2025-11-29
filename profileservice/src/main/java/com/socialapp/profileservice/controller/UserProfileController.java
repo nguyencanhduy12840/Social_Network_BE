@@ -1,5 +1,6 @@
 package com.socialapp.profileservice.controller;
 
+;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.socialapp.profileservice.dto.request.UpdateUserProfileRequest;
@@ -22,8 +23,11 @@ import java.util.List;
 @RestController
 public class UserProfileController {
     private final UserProfileService userProfileService;
-    public UserProfileController(UserProfileService userProfileService) {
+    private final ObjectMapper mapper;
+
+    public UserProfileController(UserProfileService userProfileService, ObjectMapper mapper) {
         this.userProfileService = userProfileService;
+        this.mapper = mapper;
     }
 
     @GetMapping("/users/{profileId}")
@@ -38,11 +42,12 @@ public class UserProfileController {
 
     @PutMapping(value="/users", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     ResponseEntity<UserProfile> updateUserProfile(
-        @RequestPart("profile") String profile,
-        @RequestPart(value = "media", required = false) MultipartFile mediaFile) throws JsonProcessingException {
-        
-        ObjectMapper mapper = new ObjectMapper();
-        UpdateUserProfileRequest request = mapper.readValue(profile, UpdateUserProfileRequest.class);
+            @RequestPart("profile") String profile,
+            @RequestPart(value = "media", required = false) MultipartFile mediaFile) throws JsonProcessingException {
+
+        UpdateUserProfileRequest request =
+                mapper.readValue(profile, UpdateUserProfileRequest.class);
+
         return ResponseEntity.ok(userProfileService.updateProfile(request, mediaFile));
     }
 }
