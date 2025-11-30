@@ -1,13 +1,9 @@
 package com.socialapp.postservice.repository.httpclient;
 
-import java.util.List;
-
 import com.socialapp.postservice.dto.response.OneUserProfileResponse;
 import org.springframework.cloud.openfeign.FeignClient;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
-
-;
 
 import com.socialapp.postservice.config.AuthenticationRequestInterceptor;
 import com.socialapp.postservice.dto.response.ApiResponse;

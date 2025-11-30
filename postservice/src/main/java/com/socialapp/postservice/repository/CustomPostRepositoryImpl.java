@@ -25,14 +25,14 @@ public class CustomPostRepositoryImpl implements CustomPostRepository {
         // 2. Posts PUBLIC của bất kỳ ai
         // 3. Posts FRIENDS của bạn bè
 
-        Criteria criteria = new Criteria().orOperator(
+        Criteria typeCriteria = type != null ? Criteria.where("type").is(type) : new Criteria();
+
+        Criteria privacyCriteria = new Criteria().orOperator(
             // Tất cả posts của chính mình
             Criteria.where("authorId").is(currentUserId),
 
             // Tất cả posts PUBLIC
             Criteria.where("privacy").is("PUBLIC"),
-
-            Criteria.where("type").is(type),
 
             // Posts FRIENDS của bạn bè
             new Criteria().andOperator(
@@ -41,8 +41,13 @@ public class CustomPostRepositoryImpl implements CustomPostRepository {
             )
         );
 
+        // Kết hợp type và privacy criteria
+        Criteria finalCriteria = type != null ? 
+            new Criteria().andOperator(typeCriteria, privacyCriteria) : 
+            privacyCriteria;
+
         // Query với pagination và sorting
-        Query query = new Query(criteria)
+        Query query = new Query(finalCriteria)
                 .with(pageable)
                 .with(pageable.getSort());
 

@@ -9,7 +9,7 @@ import lombok.Setter;
 @Setter
 @AllArgsConstructor
 @NoArgsConstructor
-public class SeenStoryRequest {
-    private String storyId;
+public class SeenPostRequest {
+    private String postId;
     private String viewerId;
 }

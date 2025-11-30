@@ -19,4 +19,5 @@ public class CreatePostRequest {
     private List<String> media;
     private String groupId;
     private String privacy;
+    private String type;
 }

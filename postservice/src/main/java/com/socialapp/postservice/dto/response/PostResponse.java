@@ -23,9 +23,11 @@ public class PostResponse {
     Instant createdAt;
     Instant updatedAt;
 
+    String type;
     String privacy;
 
     List<String> likes;
+    List<String> seenBy;
     Integer commentsCount;
     OneUserProfileResponse.UserProfileOne authorProfile;
 }

@@ -6,7 +6,7 @@ import java.util.List;
 import java.util.Optional;
 
 
-import com.socialapp.postservice.dto.request.SeenStoryRequest;
+import com.socialapp.postservice.dto.request.SeenPostRequest;
 import com.socialapp.postservice.dto.response.*;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -259,13 +259,13 @@ public class PostService {
         return null;
      }
 
-     public Post seenStory(SeenStoryRequest seenStoryRequest) {
-        Optional<Post> post = postRepository.findById(seenStoryRequest.getStoryId());
+     public Post markPostAsSeen(SeenPostRequest seenPostRequest) {
+        Optional<Post> post = postRepository.findById(seenPostRequest.getPostId());
         if(post.isPresent()){
             Post existingPost = post.get();
             List<String> seenBy = existingPost.getSeenBy();
-            if (!seenBy.contains(seenStoryRequest.getViewerId())) {
-                seenBy.add(seenStoryRequest.getViewerId());
+            if (!seenBy.contains(seenPostRequest.getViewerId())) {
+                seenBy.add(seenPostRequest.getViewerId());
             }
             existingPost.setSeenBy(seenBy);
             return postRepository.save(existingPost);
@@ -273,8 +273,8 @@ public class PostService {
         return null;
      }
 
-        public List<OneUserProfileResponse.UserProfileOne> getUsersWhoSeenStory(String storyId) {
-            Optional<Post> post = postRepository.findById(storyId);
+        public List<OneUserProfileResponse.UserProfileOne> getUsersWhoSeenPost(String postId) {
+            Optional<Post> post = postRepository.findById(postId);
             if(post.isPresent()){
                 Post currentPost = post.get();
                 List<String> seenUserIds = currentPost.getSeenBy();

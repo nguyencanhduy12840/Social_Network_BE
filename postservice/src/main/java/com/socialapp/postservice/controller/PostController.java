@@ -1,6 +1,6 @@
 package com.socialapp.postservice.controller;
 
-import com.socialapp.postservice.dto.request.SeenStoryRequest;
+import com.socialapp.postservice.dto.request.SeenPostRequest;
 import com.socialapp.postservice.dto.response.OneUserProfileResponse;
 import com.socialapp.postservice.dto.response.PostResponse;
 import com.socialapp.postservice.dto.response.PagedPostResponse;
@@ -105,20 +105,20 @@ public class PostController {
         return ResponseEntity.ok(users);
     }
 
-    @PostMapping("/stories/seen")
-    public ResponseEntity<Post> seenStory(@RequestBody SeenStoryRequest seenStoryRequest) {
-        Post post = postService.seenStory(seenStoryRequest);
+    @PostMapping("/seen")
+    public ResponseEntity<Post> markPostAsSeen(@RequestBody SeenPostRequest seenPostRequest) {
+        Post post = postService.markPostAsSeen(seenPostRequest);
         if(post == null) {
             throw new NotFoundException("Post not found");
         }
         return ResponseEntity.ok(post);
     }
 
-    @GetMapping("/stories/seen/{storyId}")
-    public ResponseEntity<List<OneUserProfileResponse.UserProfileOne>> getUsersWhoSeenStory(@PathVariable String storyId) {
-        List<OneUserProfileResponse.UserProfileOne> users = postService.getUsersWhoSeenStory(storyId);
+    @GetMapping("/seen/{postId}")
+    public ResponseEntity<List<OneUserProfileResponse.UserProfileOne>> getUsersWhoSeenPost(@PathVariable String postId) {
+        List<OneUserProfileResponse.UserProfileOne> users = postService.getUsersWhoSeenPost(postId);
         if (users == null) {
-            throw new NotFoundException("Story not found");
+            throw new NotFoundException("Post not found");
         }
         return ResponseEntity.ok(users);
     }
