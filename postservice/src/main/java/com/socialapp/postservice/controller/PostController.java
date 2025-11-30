@@ -57,7 +57,7 @@ public class PostController {
         return ResponseEntity.ok().body(pagedResponse);
      }
 
-     @PostMapping("/update-post")
+     @PutMapping("/update-post")
      public ResponseEntity<Post> updatePost(@RequestParam("postId") String postId,
                                             @RequestParam(required = false) String content,
                                             @RequestParam("privacy") String privacy,
