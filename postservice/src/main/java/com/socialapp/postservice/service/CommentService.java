@@ -68,41 +68,48 @@ public class CommentService {
         Comment savedComment = commentRepository.save(newComment);
         if(savedComment.getParentCommentId() != null) {
 
-            CommentEvent commentEventToParent = CommentEvent.builder()
-                    .commentId(savedComment.getId())
-                    .postId(savedComment.getPostId())
-                    .authorId(savedComment.getAuthorId())
-                    .receiverId(savedComment.getParentCommentId())
-                    .groupId("")
-                    .eventType("REPLY_COMMENT")
-                    .build();
+            if(!savedComment.getAuthorId().equals(savedComment.getParentCommentId())) {
+                CommentEvent commentEventToParent = CommentEvent.builder()
+                        .commentId(savedComment.getId())
+                        .postId(savedComment.getPostId())
+                        .authorId(savedComment.getAuthorId())
+                        .receiverId(savedComment.getParentCommentId())
+                        .groupId("")
+                        .eventType("REPLY_COMMENT")
+                        .build();
+
+                BaseEvent baseEventParent = BaseEvent.builder()
+                        .eventType("REPLY_COMMENT")
+                        .sourceService("CommentService")
+                        .payload(commentEventToParent).build();
+
+                kafkaTemplate.send(NOTIFICATION_TOPIC, baseEventParent);
+            }
+
             Post tempPost = postRepository.findById(savedComment.getPostId()).get();
             tempPost.setCommentsCount(tempPost.getCommentsCount() + 1);
             postRepository.save(tempPost);
             PostResponse post = postService.getPostById(savedComment.getPostId());
 
-            CommentEvent commentEventToPostOwner = CommentEvent.builder()
-                    .commentId(savedComment.getId())
-                    .postId(savedComment.getPostId())
-                    .authorId(savedComment.getAuthorId())
-                    .receiverId(post.getAuthorProfile().getId())
-                    .groupId("")
-                    .eventType("COMMENT_ON_POST")
-                    .build();
+            if(!savedComment.getAuthorId().equals(post.getAuthorProfile().getId())){
+                CommentEvent commentEventToPostOwner = CommentEvent.builder()
+                        .commentId(savedComment.getId())
+                        .postId(savedComment.getPostId())
+                        .authorId(savedComment.getAuthorId())
+                        .receiverId(post.getAuthorProfile().getId())
+                        .groupId("")
+                        .eventType("COMMENT_ON_POST")
+                        .build();
 
-            BaseEvent baseEventParent = BaseEvent.builder()
-                    .eventType("REPLY_COMMENT")
-                            .sourceService("CommentService")
-                    .payload(commentEventToParent).build();
 
-            kafkaTemplate.send(NOTIFICATION_TOPIC, baseEventParent);
 
-            BaseEvent baseEventPostOwner = BaseEvent.builder()
-                    .eventType("COMMENT_ON_POST")
-                            .sourceService("CommentService")
-                    .payload(commentEventToPostOwner).build();
+                BaseEvent baseEventPostOwner = BaseEvent.builder()
+                        .eventType("COMMENT_ON_POST")
+                        .sourceService("CommentService")
+                        .payload(commentEventToPostOwner).build();
 
-            kafkaTemplate.send(NOTIFICATION_TOPIC, baseEventPostOwner);
+                kafkaTemplate.send(NOTIFICATION_TOPIC, baseEventPostOwner);
+            }
         }
         else {
             PostResponse post = postService.getPostById(savedComment.getPostId());
@@ -111,22 +118,23 @@ public class CommentService {
             tempPost.setCommentsCount(tempPost.getCommentsCount() + 1);
             postRepository.save(tempPost);
 
-            CommentEvent commentEventToPostOwner = CommentEvent.builder()
-                    .commentId(savedComment.getId())
-                    .postId(savedComment.getPostId())
-                    .authorId(savedComment.getAuthorId())
-                    .receiverId(post.getAuthorProfile().getId())
-                    .groupId("")
-                    .eventType("COMMENT_ON_POST")
-                    .build();
+            if(!savedComment.getAuthorId().equals(post.getAuthorProfile().getId())){
+                CommentEvent commentEventToPostOwner = CommentEvent.builder()
+                        .commentId(savedComment.getId())
+                        .postId(savedComment.getPostId())
+                        .authorId(savedComment.getAuthorId())
+                        .receiverId(post.getAuthorProfile().getId())
+                        .groupId("")
+                        .eventType("COMMENT_ON_POST")
+                        .build();
 
-            BaseEvent baseEvent = BaseEvent.builder()
-                    .eventType("COMMENT_ON_POST")
-                    .sourceService("CommentService")
-                    .payload(commentEventToPostOwner).build();
+                BaseEvent baseEvent = BaseEvent.builder()
+                        .eventType("COMMENT_ON_POST")
+                        .sourceService("CommentService")
+                        .payload(commentEventToPostOwner).build();
 
-            kafkaTemplate.send(NOTIFICATION_TOPIC, baseEvent);
-
+                kafkaTemplate.send(NOTIFICATION_TOPIC, baseEvent);
+            }
         }
 
         CommentResponse finalComment = commentConverter.toCommentResponse(savedComment);
@@ -226,21 +234,23 @@ public class CommentService {
         }
         Comment savedComment = commentRepository.save(comment);
         if(!isLiked) {
-            CommentEvent commentEvent = CommentEvent.builder()
-                    .commentId(savedComment.getId())
-                    .postId(savedComment.getPostId())
-                    .authorId(userId)
-                    .groupId("")
-                    .receiverId(savedComment.getAuthorId())
-                    .eventType("LIKE_COMMENT")
-                    .build();
+            if(!userId.equals(savedComment.getAuthorId())){
+                CommentEvent commentEvent = CommentEvent.builder()
+                        .commentId(savedComment.getId())
+                        .postId(savedComment.getPostId())
+                        .authorId(userId)
+                        .groupId("")
+                        .receiverId(savedComment.getAuthorId())
+                        .eventType("LIKE_COMMENT")
+                        .build();
 
-            BaseEvent baseEvent = BaseEvent.builder()
-                    .eventType("LIKE_COMMENT")
-                            .sourceService("CommentService")
-                    .payload(commentEvent).build();
+                BaseEvent baseEvent = BaseEvent.builder()
+                        .eventType("LIKE_COMMENT")
+                        .sourceService("CommentService")
+                        .payload(commentEvent).build();
 
-            kafkaTemplate.send(NOTIFICATION_TOPIC, baseEvent);
+                kafkaTemplate.send(NOTIFICATION_TOPIC, baseEvent);
+            }
         }
         return savedComment;
     }
