@@ -7,6 +7,6 @@ import org.springframework.data.domain.Pageable;
 import java.util.List;
 
 public interface CustomPostRepository {
-    Page<Post> findPostsForMainScreen(String currentUserId, List<String> friendIds, Pageable pageable);
+    Page<Post> findPostsForMainScreen(String currentUserId, List<String> friendIds, String type, Pageable pageable);
 }
 

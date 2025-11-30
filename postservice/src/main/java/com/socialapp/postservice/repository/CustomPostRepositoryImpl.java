@@ -19,7 +19,7 @@ public class CustomPostRepositoryImpl implements CustomPostRepository {
     private final MongoTemplate mongoTemplate;
 
     @Override
-    public Page<Post> findPostsForMainScreen(String currentUserId, List<String> friendIds, Pageable pageable) {
+    public Page<Post> findPostsForMainScreen(String currentUserId, List<String> friendIds, String type, Pageable pageable) {
         // Tạo criteria phức tạp để filter posts theo logic:
         // 1. Posts của chính mình (tất cả privacy)
         // 2. Posts PUBLIC của bất kỳ ai
@@ -31,6 +31,8 @@ public class CustomPostRepositoryImpl implements CustomPostRepository {
 
             // Tất cả posts PUBLIC
             Criteria.where("privacy").is("PUBLIC"),
+
+            Criteria.where("type").is(type),
 
             // Posts FRIENDS của bạn bè
             new Criteria().andOperator(

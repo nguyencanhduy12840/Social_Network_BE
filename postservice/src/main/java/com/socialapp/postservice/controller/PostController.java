@@ -1,6 +1,5 @@
 package com.socialapp.postservice.controller;
 
-import com.socialapp.postservice.dto.request.UpdatePostRequest;
 import com.socialapp.postservice.dto.response.OneUserProfileResponse;
 import com.socialapp.postservice.dto.response.PostResponse;
 import com.socialapp.postservice.dto.response.PagedPostResponse;
@@ -33,8 +32,9 @@ public class PostController {
             @RequestParam(required = false) String content,
             @RequestParam(required = false) String groupId,
             @RequestParam("privacy") String privacy,
+            @RequestParam("type") String type,
             @RequestPart(value = "media", required = false) MultipartFile[] mediaFiles) {
-                CreatePostResponse post = postService.createPost(userId, content, groupId, privacy, mediaFiles);
+                CreatePostResponse post = postService.createPost(userId, content, groupId, privacy,type,  mediaFiles);
                 return ResponseEntity.ok(post);
             }
     
@@ -50,8 +50,9 @@ public class PostController {
      @GetMapping("/get-post")
      public ResponseEntity<PagedPostResponse> getPostDisplay(
              @RequestParam(defaultValue = "0") int page,
-             @RequestParam(defaultValue = "10") int size){
-        PagedPostResponse pagedResponse = postService.getPostOnMainScreen(page, size);
+             @RequestParam(defaultValue = "10") int size,
+             @RequestParam String type){
+        PagedPostResponse pagedResponse = postService.getPostOnMainScreen(page, size, type);
         return ResponseEntity.ok().body(pagedResponse);
      }
 

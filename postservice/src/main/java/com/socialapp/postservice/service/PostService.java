@@ -6,9 +6,7 @@ import java.util.List;
 import java.util.Optional;
 
 
-import com.socialapp.postservice.dto.response.OneUserProfileResponse;
-import com.socialapp.postservice.dto.response.PostResponse;
-import com.socialapp.postservice.dto.response.PagedPostResponse;
+import com.socialapp.postservice.dto.response.*;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -19,8 +17,6 @@ import org.springframework.web.multipart.MultipartFile;
 import com.socialapp.postservice.dto.request.BaseEvent;
 import com.socialapp.postservice.dto.request.LikePostRequest;
 import com.socialapp.postservice.dto.request.PostEvent;
-import com.socialapp.postservice.dto.response.CreatePostResponse;
-import com.socialapp.postservice.dto.response.UserProfile;
 import com.socialapp.postservice.entity.Post;
 import com.socialapp.postservice.mapper.PostConverter;
 import com.socialapp.postservice.repository.PostRepository;
@@ -49,7 +45,7 @@ public class PostService {
         this.profileClient = profileClient;
     }
 
-    public CreatePostResponse createPost(String userId, String content, String groupId, String privacy, MultipartFile[] mediaFiles) {
+    public CreatePostResponse createPost(String userId, String content, String groupId, String privacy, String type, MultipartFile[] mediaFiles) {
         List<String> mediaUrls = new ArrayList<>();
 
         if (mediaFiles != null && mediaFiles.length > 0) {
@@ -67,12 +63,12 @@ public class PostService {
             }
         }
 
-        String type = (groupId == null || groupId.isEmpty()) ? "personal" : "group";
 
         Post post = Post.builder()
                 .authorId(userId)
                 .groupId(groupId)
                 .type(type)
+                .seenBy(new ArrayList<>())
                 .content(content)
                 .privacy(privacy)
                 .media(mediaUrls)
@@ -80,7 +76,6 @@ public class PostService {
                 .likes(new ArrayList<>())
                 .commentsCount(0)
                 .build();
-        
 
         Post savedPost = postRepository.save(post);
 
@@ -140,7 +135,7 @@ public class PostService {
         }
     }
 
-    public PagedPostResponse getPostOnMainScreen(int page, int size) {
+    public PagedPostResponse getPostOnMainScreen(int page, int size, String type) {
         Optional<String> requestId = SecurityUtil.getCurrentUserLogin();
         Pageable pageable = PageRequest.of(page, size,
                 org.springframework.data.domain.Sort.by(
@@ -159,10 +154,10 @@ public class PostService {
                     .toList();
 
             // Sử dụng custom repository với MongoDB query - tối ưu hiệu năng
-            postsPage = postRepository.findPostsForMainScreen(currentUserId, friendIds, pageable);
+            postsPage = postRepository.findPostsForMainScreen(currentUserId, friendIds, type, pageable);
         } else {
             // Người dùng chưa đăng nhập - chỉ thấy PUBLIC
-            postsPage = postRepository.findByPrivacyOrderByCreatedAtDesc("PUBLIC", pageable);
+            postsPage = postRepository.findByPrivacyAndTypeOrderByCreatedAtDesc("PUBLIC", type, pageable);
         }
 
         // Convert posts to response
@@ -207,6 +202,7 @@ public class PostService {
                 }
             }
             post.setMedia(mediaUrls);
+            post.setUpdatedAt(Instant.now());
             return postRepository.save(post);
         } else {
             throw new RuntimeException("Post not found");
@@ -261,4 +257,5 @@ public class PostService {
         }
         return null;
      }
+
 }

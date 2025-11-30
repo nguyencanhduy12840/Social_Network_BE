@@ -1,5 +1,6 @@
 package com.socialapp.postservice.repository;
 
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 
@@ -14,7 +15,7 @@ import com.socialapp.postservice.entity.Post;
 public interface PostRepository extends MongoRepository<Post, String>, CustomPostRepository {
     Optional<Post> findById(String postId);
 
-    List<Post> findByAuthorIdAndPrivacyIn(String authorId, List<String> privacy);
+    List<Post> findByAuthorIdAndPrivacyIn(String authorId, Collection<String> privacies);
 
     List<Post> findByAuthorId(String authorId);
 
@@ -23,7 +24,7 @@ public interface PostRepository extends MongoRepository<Post, String>, CustomPos
     List<Post> findByPrivacyOrderByCreatedAtDesc(String privacy);
 
     // Thêm các phương thức với Pageable cho pagination
-    Page<Post> findByPrivacyOrderByCreatedAtDesc(String privacy, Pageable pageable);
+    Page<Post> findByPrivacyAndTypeOrderByCreatedAtDesc(String privacy, String type, Pageable pageable);
 
     Page<Post> findByAuthorIdInAndPrivacyInOrderByCreatedAtDesc(List<String> authorIds, List<String> privacy, Pageable pageable);
 

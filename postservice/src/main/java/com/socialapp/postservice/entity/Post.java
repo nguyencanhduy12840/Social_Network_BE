@@ -32,5 +32,6 @@ public class Post {
     String privacy;
 
     List<String> likes;
+    List<String> seenBy;
     Integer commentsCount;
 }
