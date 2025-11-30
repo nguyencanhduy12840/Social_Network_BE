@@ -105,12 +105,21 @@ public class PostController {
         return ResponseEntity.ok(users);
     }
 
-    @PostMapping("/story/seen")
+    @PostMapping("/stories/seen")
     public ResponseEntity<Post> seenStory(@RequestBody SeenStoryRequest seenStoryRequest) {
         Post post = postService.seenStory(seenStoryRequest);
         if(post == null) {
             throw new NotFoundException("Post not found");
         }
         return ResponseEntity.ok(post);
+    }
+
+    @GetMapping("/stories/seen/{storyId}")
+    public ResponseEntity<List<OneUserProfileResponse.UserProfileOne>> getUsersWhoSeenStory(@PathVariable String storyId) {
+        List<OneUserProfileResponse.UserProfileOne> users = postService.getUsersWhoSeenStory(storyId);
+        if (users == null) {
+            throw new NotFoundException("Story not found");
+        }
+        return ResponseEntity.ok(users);
     }
 }

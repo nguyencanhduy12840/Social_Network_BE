@@ -272,4 +272,19 @@ public class PostService {
         }
         return null;
      }
+
+        public List<OneUserProfileResponse.UserProfileOne> getUsersWhoSeenStory(String storyId) {
+            Optional<Post> post = postRepository.findById(storyId);
+            if(post.isPresent()){
+                Post currentPost = post.get();
+                List<String> seenUserIds = currentPost.getSeenBy();
+                List<OneUserProfileResponse.UserProfileOne> seenUsers = new ArrayList<>();
+                for(String userId : seenUserIds){
+                    OneUserProfileResponse authorProfile = profileClient.getUserProfile(userId);
+                    seenUsers.add(authorProfile.getData());
+                }
+                return seenUsers;
+            }
+            return null;
+        }
 }
