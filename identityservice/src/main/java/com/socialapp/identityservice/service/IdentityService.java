@@ -112,4 +112,8 @@ public class IdentityService {
             return savedIdentity;
         }
     }
+
+    public Identity findById(String id) {
+        return identityRepository.findById(id).orElse(null);
+    }
 }

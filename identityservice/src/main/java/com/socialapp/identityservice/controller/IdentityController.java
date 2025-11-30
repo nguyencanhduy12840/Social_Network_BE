@@ -29,6 +29,8 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.Optional;
+
 @Slf4j
 @RestController
 @RequestMapping("/auth")
@@ -169,4 +171,17 @@ public class IdentityController {
         return ResponseEntity.ok().body(response);
     }
 
+    @PostMapping("/logout")
+    public ResponseEntity<String> logout(@RequestParam String email) {
+        this.identityService.updateRefreshToken("", email);
+        ResponseCookie responseCookie = ResponseCookie.from("refresh_token", "")
+                .httpOnly(true)
+                .secure(true)
+                .path("/")
+                .maxAge(0)
+                .build();
+        return ResponseEntity.ok()
+                .header(HttpHeaders.SET_COOKIE, responseCookie.toString())
+                .body("Logout successful");
+    }
 }
