@@ -1,5 +1,6 @@
 package com.socialapp.postservice.controller;
 
+import com.socialapp.postservice.dto.request.SeenStoryRequest;
 import com.socialapp.postservice.dto.response.OneUserProfileResponse;
 import com.socialapp.postservice.dto.response.PostResponse;
 import com.socialapp.postservice.dto.response.PagedPostResponse;
@@ -102,5 +103,14 @@ public class PostController {
             throw new NotFoundException("Post not found");
         }
         return ResponseEntity.ok(users);
+    }
+
+    @PostMapping("/story/seen")
+    public ResponseEntity<Post> seenStory(@RequestBody SeenStoryRequest seenStoryRequest) {
+        Post post = postService.seenStory(seenStoryRequest);
+        if(post == null) {
+            throw new NotFoundException("Post not found");
+        }
+        return ResponseEntity.ok(post);
     }
 }

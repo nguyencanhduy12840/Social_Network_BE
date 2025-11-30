@@ -6,6 +6,7 @@ import java.util.List;
 import java.util.Optional;
 
 
+import com.socialapp.postservice.dto.request.SeenStoryRequest;
 import com.socialapp.postservice.dto.response.*;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -258,4 +259,17 @@ public class PostService {
         return null;
      }
 
+     public Post seenStory(SeenStoryRequest seenStoryRequest) {
+        Optional<Post> post = postRepository.findById(seenStoryRequest.getStoryId());
+        if(post.isPresent()){
+            Post existingPost = post.get();
+            List<String> seenBy = existingPost.getSeenBy();
+            if (!seenBy.contains(seenStoryRequest.getViewerId())) {
+                seenBy.add(seenStoryRequest.getViewerId());
+            }
+            existingPost.setSeenBy(seenBy);
+            return postRepository.save(existingPost);
+        }
+        return null;
+     }
 }
