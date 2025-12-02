@@ -259,18 +259,31 @@ public class PostService {
         return null;
      }
 
-     public Post markPostAsSeen(SeenPostRequest seenPostRequest) {
-        Optional<Post> post = postRepository.findById(seenPostRequest.getPostId());
-        if(post.isPresent()){
-            Post existingPost = post.get();
-            List<String> seenBy = existingPost.getSeenBy();
-            if (!seenBy.contains(seenPostRequest.getViewerId())) {
-                seenBy.add(seenPostRequest.getViewerId());
-            }
-            existingPost.setSeenBy(seenBy);
-            return postRepository.save(existingPost);
+     public List<Post> markPostsAsSeen(SeenPostRequest seenPostRequest) {
+        List<String> postIds = seenPostRequest.getPostIds();
+        String viewerId = seenPostRequest.getViewerId();
+        
+        if (postIds == null || postIds.isEmpty()) {
+            return new ArrayList<>();
         }
-        return null;
+        
+        List<Post> posts = postRepository.findAllById(postIds);
+        List<Post> updatedPosts = new ArrayList<>();
+        
+        for (Post post : posts) {
+            List<String> seenBy = post.getSeenBy();
+            if (!seenBy.contains(viewerId)) {
+                seenBy.add(viewerId);
+                post.setSeenBy(seenBy);
+                updatedPosts.add(post);
+            }
+        }
+        
+        if (!updatedPosts.isEmpty()) {
+            return postRepository.saveAll(updatedPosts);
+        }
+        
+        return updatedPosts;
      }
 
         public List<OneUserProfileResponse.UserProfileOne> getUsersWhoSeenPost(String postId) {

@@ -106,12 +106,9 @@ public class PostController {
     }
 
     @PostMapping("/seen")
-    public ResponseEntity<Post> markPostAsSeen(@RequestBody SeenPostRequest seenPostRequest) {
-        Post post = postService.markPostAsSeen(seenPostRequest);
-        if(post == null) {
-            throw new NotFoundException("Post not found");
-        }
-        return ResponseEntity.ok(post);
+    public ResponseEntity<List<Post>> markPostsAsSeen(@RequestBody SeenPostRequest seenPostRequest) {
+        List<Post> posts = postService.markPostsAsSeen(seenPostRequest);
+        return ResponseEntity.ok(posts);
     }
 
     @GetMapping("/seen/{postId}")
