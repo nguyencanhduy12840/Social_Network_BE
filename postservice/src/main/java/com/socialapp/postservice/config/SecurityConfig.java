@@ -46,7 +46,9 @@ public class SecurityConfig {
                 "/delete-post/**",
                 "/internal/**",
                 "/comments/**",
-                "/userlikes/**"
+                "/userlikes/**",
+                "/seen",
+                "/seen/**"
         };
         http
                 .csrf(c -> c.disable())
