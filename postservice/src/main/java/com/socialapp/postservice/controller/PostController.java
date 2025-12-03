@@ -4,6 +4,7 @@ import com.socialapp.postservice.dto.request.SeenPostRequest;
 import com.socialapp.postservice.dto.response.OneUserProfileResponse;
 import com.socialapp.postservice.dto.response.PostResponse;
 import com.socialapp.postservice.dto.response.PagedPostResponse;
+import com.socialapp.postservice.exception.NotFoundException;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -14,8 +15,6 @@ import com.socialapp.postservice.dto.request.LikePostRequest;
 import com.socialapp.postservice.dto.response.CreatePostResponse;
 import com.socialapp.postservice.entity.Post;
 import com.socialapp.postservice.service.PostService;
-
-import jakarta.ws.rs.NotFoundException;
 
 import java.util.List;
 
