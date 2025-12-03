@@ -34,7 +34,6 @@ public class Notification {
     @Builder
     public static class ExtraData {
         private String postId;
-        private String storyId;
         private String commentId;
         private String groupId;
     }
