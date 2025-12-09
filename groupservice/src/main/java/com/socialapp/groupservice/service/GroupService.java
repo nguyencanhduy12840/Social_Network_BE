@@ -431,4 +431,30 @@ public class GroupService {
         // Convert sang response DTO sử dụng ModelMapper
         return groupConverter.toUpdateGroupResponse(updatedGroup);
     }
+
+    @Transactional(readOnly = true)
+    public List<GroupMemberResponse> getGroupMembersInternal(String groupId) {
+        // Method này dùng cho internal call từ các service khác
+        // Không cần kiểm tra authentication
+
+        // Tìm group theo ID
+        Group group = groupRepository.findById(groupId)
+                .orElseThrow(() -> new RuntimeException("Group not found"));
+
+        // Lấy danh sách thành viên
+        List<GroupMember> members = groupMemberRepository.findAllByGroupId(groupId);
+
+        // Convert sang response DTO
+        return members.stream()
+                .map(member -> {
+                    GroupMemberResponse response = new GroupMemberResponse();
+                    response.setId(member.getId());
+                    response.setUserId(String.valueOf(member.getUserId()));
+                    response.setGroupId(groupId);
+                    response.setRole(member.getRole());
+                    response.setJoinedAt(member.getJoinedAt());
+                    return response;
+                })
+                .toList();
+    }
 }

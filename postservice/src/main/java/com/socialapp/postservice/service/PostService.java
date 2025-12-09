@@ -22,6 +22,7 @@ import com.socialapp.postservice.entity.Post;
 import com.socialapp.postservice.mapper.PostConverter;
 import com.socialapp.postservice.repository.PostRepository;
 import com.socialapp.postservice.repository.httpclient.ProfileClient;
+import com.socialapp.postservice.repository.httpclient.GroupClient;
 import com.socialapp.postservice.util.SecurityUtil;
 
 @Service
@@ -33,17 +34,19 @@ public class PostService {
 
     private final KafkaTemplate<String, BaseEvent> kafkaTemplate;
     private final ProfileClient profileClient;
+    private final GroupClient groupClient;
 
     private final String NOTIFICATION_TOPIC = "notification-events";
 
     public PostService(PostRepository postRepository, PostConverter postConverter,
                        CloudinaryService cloudinaryService, KafkaTemplate<String, BaseEvent> kafkaTemplate,
-                       ProfileClient profileClient) {
+                       ProfileClient profileClient, GroupClient groupClient) {
         this.postRepository = postRepository;
         this.postConverter = postConverter;
         this.cloudinaryService = cloudinaryService;
         this.kafkaTemplate = kafkaTemplate;
         this.profileClient = profileClient;
+        this.groupClient = groupClient;
     }
 
     public CreatePostResponse createPost(String userId, String content, String groupId, String privacy, String type, MultipartFile[] mediaFiles) {
@@ -80,27 +83,67 @@ public class PostService {
 
         Post savedPost = postRepository.save(post);
 
-        if(savedPost.getPrivacy().equals("PUBLIC") || savedPost.getPrivacy().equals("FRIENDS")){
-            //send notifications to friends
-            UserProfile friends = profileClient.getFriends(userId);
-            friends.getData().parallelStream().forEach(friend-> {
-                PostEvent event = PostEvent.builder()
-                        .postId(savedPost.getId())
-                        .authorId(userId)
-                        .groupId("")
-                        .eventType("NEW_POST")
-                        .receiverId(friend.getUserId())
-                        .build();
+        // Xử lý gửi thông báo
+        if (groupId != null && !groupId.isEmpty()) {
+            // TH1: Post trong group - gửi thông báo cho thành viên group
+            try {
+                ApiResponse<List<GroupMemberResponse>> groupMembersResponse = groupClient.getGroupMembers(groupId);
+                List<GroupMemberResponse> groupMembers = groupMembersResponse.getData();
+
+                if (groupMembers != null && !groupMembers.isEmpty()) {
+                    groupMembers.parallelStream()
+                        .filter(member -> !member.getUserId().equals(userId)) // Không gửi cho chính tác giả
+                        .forEach(member -> {
+                            PostEvent event = PostEvent.builder()
+                                    .postId(savedPost.getId())
+                                    .authorId(userId)
+                                    .groupId(groupId)
+                                    .eventType("NEW_POST_IN_GROUP")
+                                    .receiverId(member.getUserId())
+                                    .build();
 
                             BaseEvent baseEvent = BaseEvent.builder()
+                                    .eventType("NEW_POST_IN_GROUP")
+                                    .sourceService("PostService")
+                                    .payload(event)
+                                    .build();
+
+                            kafkaTemplate.send(NOTIFICATION_TOPIC, baseEvent);
+                        });
+                }
+            } catch (Exception e) {
+                // Log lỗi nhưng không ảnh hưởng việc tạo post
+                System.err.println("Error sending notifications to group members: " + e.getMessage());
+            }
+        } else if (savedPost.getPrivacy().equals("PUBLIC") || savedPost.getPrivacy().equals("FRIENDS")) {
+            // TH2: Post cá nhân (không có groupId) - gửi thông báo cho bạn bè
+            try {
+                UserProfile friends = profileClient.getFriends(userId);
+                if (friends != null && friends.getData() != null) {
+                    friends.getData().parallelStream().forEach(friend -> {
+                        PostEvent event = PostEvent.builder()
+                                .postId(savedPost.getId())
+                                .authorId(userId)
+                                .groupId("")
+                                .eventType("NEW_POST")
+                                .receiverId(friend.getUserId())
+                                .build();
+
+                        BaseEvent baseEvent = BaseEvent.builder()
                                 .eventType("NEW_POST")
                                 .sourceService("PostService")
                                 .payload(event)
                                 .build();
 
                         kafkaTemplate.send(NOTIFICATION_TOPIC, baseEvent);
-            });
+                    });
+                }
+            } catch (Exception e) {
+                // Log lỗi nhưng không ảnh hưởng việc tạo post
+                System.err.println("Error sending notifications to friends: " + e.getMessage());
+            }
         }
+
         return postConverter.convertToCreatePostResponse(savedPost);
     }
 
