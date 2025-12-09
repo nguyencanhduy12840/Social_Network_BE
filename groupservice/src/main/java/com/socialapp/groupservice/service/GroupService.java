@@ -1,6 +1,7 @@
 package com.socialapp.groupservice.service;
 
 import com.socialapp.groupservice.dto.request.CreateGroupRequest;
+import com.socialapp.groupservice.dto.request.UpdateGroupRequest;
 import com.socialapp.groupservice.dto.response.*;
 import com.socialapp.groupservice.entity.Group;
 import com.socialapp.groupservice.entity.GroupJoinRequest;
@@ -392,5 +393,42 @@ public class GroupService {
         response.setMessage("Member removed successfully from the group.");
 
         return response;
+    }
+
+    @Transactional
+    public UpdateGroupResponse updateGroup(UpdateGroupRequest request, MultipartFile backgroundImage) {
+        // Lấy userId từ SecurityContext
+        String currentUserId = SecurityUtil.getCurrentUserLogin()
+                .orElseThrow(() -> new RuntimeException("User not authenticated"));
+
+        // Tìm group theo ID từ request
+        Group group = groupRepository.findById(request.getGroupId())
+                .orElseThrow(() -> new RuntimeException("Group not found"));
+
+        // Kiểm tra người dùng có phải là chủ nhóm không
+        if (!group.getOwnerId().equals(currentUserId)) {
+            throw new RuntimeException("Only the group owner can update the group information");
+        }
+
+        // Cập nhật thông tin nhóm
+        group.setName(request.getName());
+        group.setDescription(request.getDescription());
+
+        // Upload background image mới nếu có
+        if (backgroundImage != null && !backgroundImage.isEmpty()) {
+            // Xóa hình ảnh cũ trên Cloudinary nếu có
+            if (group.getBackgroundImageUrl() != null) {
+                cloudinaryService.deleteImage(group.getBackgroundImageUrl());
+            }
+            // Upload hình ảnh mới
+            String newImageUrl = cloudinaryService.uploadImage(backgroundImage);
+            group.setBackgroundImageUrl(newImageUrl);
+        }
+
+        // Lưu thay đổi vào database
+        Group updatedGroup = groupRepository.save(group);
+
+        // Convert sang response DTO sử dụng ModelMapper
+        return groupConverter.toUpdateGroupResponse(updatedGroup);
     }
 }

@@ -3,6 +3,7 @@ package com.socialapp.groupservice.controller;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.socialapp.groupservice.dto.request.CreateGroupRequest;
+import com.socialapp.groupservice.dto.request.UpdateGroupRequest;
 import com.socialapp.groupservice.dto.request.UpdateMemberRoleRequest;
 import com.socialapp.groupservice.dto.response.*;
 import com.socialapp.groupservice.service.GroupService;
@@ -36,6 +37,16 @@ public class GroupController {
     @GetMapping("/{groupId}")
     public ResponseEntity<GroupDetailResponse> getGroupDetail(@PathVariable String groupId) {
         GroupDetailResponse response = groupService.getGroupDetail(groupId);
+        return ResponseEntity.ok(response);
+    }
+
+    @PutMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<UpdateGroupResponse> updateGroup(
+            @RequestPart("group") String request,
+            @RequestPart(value = "backgroundImage", required = false) MultipartFile backgroundImage) throws JsonProcessingException {
+        ObjectMapper mapper = new ObjectMapper();
+        UpdateGroupRequest updateGroupRequest = mapper.readValue(request, UpdateGroupRequest.class);
+        UpdateGroupResponse response = groupService.updateGroup(updateGroupRequest, backgroundImage);
         return ResponseEntity.ok(response);
     }
 

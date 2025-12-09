@@ -2,6 +2,7 @@ package com.socialapp.groupservice.mapper;
 
 import com.socialapp.groupservice.dto.response.CreateGroupResponse;
 import com.socialapp.groupservice.dto.response.GroupDetailResponse;
+import com.socialapp.groupservice.dto.response.UpdateGroupResponse;
 import com.socialapp.groupservice.entity.Group;
 import org.modelmapper.ModelMapper;
 import org.springframework.stereotype.Component;
@@ -21,5 +22,11 @@ public class GroupConverter {
 
     public GroupDetailResponse toGroupDetailResponse(Group group) {
         return modelMapper.map(group, GroupDetailResponse.class);
+    }
+
+    public UpdateGroupResponse toUpdateGroupResponse(Group group) {
+        UpdateGroupResponse response = modelMapper.map(group, UpdateGroupResponse.class);
+        response.setMessage("Group information updated successfully");
+        return response;
     }
 }
