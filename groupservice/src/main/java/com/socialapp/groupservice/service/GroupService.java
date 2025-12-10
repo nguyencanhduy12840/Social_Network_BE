@@ -436,11 +436,6 @@ public class GroupService {
     public List<GroupMemberResponse> getGroupMembersInternal(String groupId) {
         // Method này dùng cho internal call từ các service khác
         // Không cần kiểm tra authentication
-
-        // Tìm group theo ID
-        Group group = groupRepository.findById(groupId)
-                .orElseThrow(() -> new RuntimeException("Group not found"));
-
         // Lấy danh sách thành viên
         List<GroupMember> members = groupMemberRepository.findAllByGroupId(groupId);
 
