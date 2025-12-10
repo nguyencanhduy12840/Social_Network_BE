@@ -19,6 +19,5 @@ public class HandleJoinRequestResponse {
     private String userId;
     private JoinRequestStatus status;
     private Instant handledAt;
-    private String message;
 }
 

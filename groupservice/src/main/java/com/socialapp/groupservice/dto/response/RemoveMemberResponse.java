@@ -16,6 +16,5 @@ public class RemoveMemberResponse {
     private String groupName;
     private String removedUserId;
     private Instant removedAt;
-    private String message;
 }
 

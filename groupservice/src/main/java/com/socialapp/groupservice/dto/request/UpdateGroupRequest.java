@@ -11,6 +11,10 @@ import lombok.Setter;
 @NoArgsConstructor
 public class UpdateGroupRequest {
     private String groupId;
+
     private String name;
+    
+    private String privacy;
+
     private String description;
 }

@@ -17,12 +17,12 @@ public class GroupDetailResponse {
     private String name;
     private String ownerId;
     private String description;
-    private String backgroundImageUrl;
+    private String backgroundUrl;
+    private String avatarUrl;
+    private String privacy;
     private Instant createdAt;
     private Instant updatedAt;
     private Integer memberCount;
-    private GroupRole currentUserRole; // Vai trò của người dùng hiện tại trong nhóm
-    private Boolean isMember; // Người dùng hiện tại có phải là thành viên không
-    private Boolean isOwner; // Người dùng hiện tại có phải là chủ nhóm không
+    private GroupRole currentUserRole; // OWNER, ADMIN, MEMBER, NONE, PENDING
 }
 

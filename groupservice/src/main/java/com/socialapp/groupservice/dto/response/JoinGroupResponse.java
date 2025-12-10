@@ -19,6 +19,5 @@ public class JoinGroupResponse {
     private String userId;
     private JoinRequestStatus status;
     private Instant requestedAt;
-    private String message;
 }
 

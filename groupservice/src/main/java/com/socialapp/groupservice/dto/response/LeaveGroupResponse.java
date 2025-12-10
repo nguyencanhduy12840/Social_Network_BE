@@ -16,6 +16,5 @@ public class LeaveGroupResponse {
     private String groupName;
     private String userId;
     private Instant leftAt;
-    private String message;
 }
 

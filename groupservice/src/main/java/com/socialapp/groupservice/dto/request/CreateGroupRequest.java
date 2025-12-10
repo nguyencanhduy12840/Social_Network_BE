@@ -10,9 +10,11 @@ import lombok.Setter;
 @AllArgsConstructor
 @NoArgsConstructor
 public class CreateGroupRequest {
+    private String ownerId;
+    
     private String name;
 
-    private String ownerId;
-
+    private String privacy;
+    
     private String description;
 }

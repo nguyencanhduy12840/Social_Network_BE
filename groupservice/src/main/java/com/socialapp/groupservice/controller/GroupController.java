@@ -27,10 +27,11 @@ public class GroupController {
     @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<CreateGroupResponse> createGroup(
             @RequestPart("group") String request,
-            @RequestPart(value = "backgroundImage", required = false) MultipartFile backgroundImage) throws JsonProcessingException {
+            @RequestPart(value = "background", required = false) MultipartFile background,
+            @RequestPart(value = "avatar", required = false) MultipartFile avatar) throws JsonProcessingException {
         ObjectMapper mapper = new ObjectMapper();
         CreateGroupRequest createGroupRequest = mapper.readValue(request, CreateGroupRequest.class);
-        CreateGroupResponse response = groupService.createGroup(createGroupRequest, backgroundImage);
+        CreateGroupResponse response = groupService.createGroup(createGroupRequest, background, avatar);
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
@@ -43,10 +44,11 @@ public class GroupController {
     @PutMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<UpdateGroupResponse> updateGroup(
             @RequestPart("group") String request,
-            @RequestPart(value = "backgroundImage", required = false) MultipartFile backgroundImage) throws JsonProcessingException {
+            @RequestPart(value = "background", required = false) MultipartFile background,
+            @RequestPart(value = "avatar", required = false) MultipartFile avatar) throws JsonProcessingException {
         ObjectMapper mapper = new ObjectMapper();
         UpdateGroupRequest updateGroupRequest = mapper.readValue(request, UpdateGroupRequest.class);
-        UpdateGroupResponse response = groupService.updateGroup(updateGroupRequest, backgroundImage);
+        UpdateGroupResponse response = groupService.updateGroup(updateGroupRequest, background, avatar);
         return ResponseEntity.ok(response);
     }
 

@@ -11,6 +11,7 @@ import com.socialapp.groupservice.repository.GroupRepository;
 import com.socialapp.groupservice.repository.GroupMemberRepository;
 import com.socialapp.groupservice.repository.GroupJoinRequestRepository;
 import com.socialapp.groupservice.util.SecurityUtil;
+import com.socialapp.groupservice.util.constant.GroupPrivacy;
 import com.socialapp.groupservice.util.constant.GroupRole;
 import com.socialapp.groupservice.util.constant.JoinRequestStatus;
 import org.springframework.stereotype.Service;
@@ -45,26 +46,40 @@ public class GroupService {
     }
 
     @Transactional
-    public CreateGroupResponse createGroup(CreateGroupRequest request, MultipartFile backgroundImage) {
+    public CreateGroupResponse createGroup(CreateGroupRequest request, MultipartFile background, MultipartFile avatar) {
         // Lấy userId từ SecurityContext
         String currentUserId = SecurityUtil.getCurrentUserLogin()
                 .orElseThrow(() -> new RuntimeException("User not authenticated"));
 
         // Tạo group entity
         Group group = new Group();
+        group.setOwnerId(currentUserId);
         group.setName(request.getName());
         group.setDescription(request.getDescription());
-        group.setOwnerId(currentUserId);
-
-        // Upload background image nếu có
-        if (backgroundImage != null && !backgroundImage.isEmpty()) {
-            String imageUrl = cloudinaryService.uploadImage(backgroundImage);
-            group.setBackgroundImageUrl(imageUrl);
+        group.setPrivacy(GroupPrivacy.valueOf(request.getPrivacy().toUpperCase()));
+        
+        // Upload background image
+        if (background != null && !background.isEmpty()) {
+            String imageUrl = cloudinaryService.uploadImage(background);
+            group.setBackgroundUrl(imageUrl);
         }
+        
+        // Upload avatar
+        if (avatar != null && !avatar.isEmpty()) {
+            String avatarUrl = cloudinaryService.uploadImage(avatar);
+            group.setAvatarUrl(avatarUrl);
+        }
+
         // Lưu group vào database
         Group savedGroup = groupRepository.save(group);
 
-        // Convert sang response DTO sử dụng ModelMapper
+        // Add Owner as a Group Member with OWNER role
+        GroupMember ownerMember = new GroupMember();
+        ownerMember.setGroup(savedGroup);
+        ownerMember.setUserId(currentUserId);
+        ownerMember.setRole(GroupRole.OWNER);
+        groupMemberRepository.save(ownerMember);
+
         return groupConverter.toCreateGroupResponse(savedGroup);
     }
 
@@ -80,29 +95,30 @@ public class GroupService {
         // Convert sang response DTO sử dụng ModelMapper
         GroupDetailResponse response = groupConverter.toGroupDetailResponse(group);
 
-        // Đếm số lượng thành viên
         Integer memberCount = groupMemberRepository.countMembersByGroupId(groupId);
         response.setMemberCount(memberCount != null ? memberCount : 0);
 
-        // Kiểm tra người dùng hiện tại có phải là chủ nhóm không
-        response.setIsOwner(currentUserId != null && currentUserId.equals(group.getOwnerId()));
+        response.setAvatarUrl(group.getAvatarUrl());
+        response.setBackgroundUrl(group.getBackgroundUrl());
+        response.setPrivacy(group.getPrivacy().name());
 
-        // Kiểm tra người dùng hiện tại có phải là thành viên không và lấy vai trò
-        if (currentUserId != null) {
-            groupMemberRepository.findByGroupIdAndUserId(groupId, currentUserId)
-                    .ifPresentOrElse(
-                            member -> {
-                                response.setIsMember(true);
-                                response.setCurrentUserRole(member.getRole());
-                            },
-                            () -> {
-                                response.setIsMember(false);
-                                response.setCurrentUserRole(null);
-                            }
-                    );
+        if (currentUserId == null) {
+            response.setCurrentUserRole(GroupRole.NONE);
+        } else if (currentUserId.equals(group.getOwnerId())) {
+            response.setCurrentUserRole(GroupRole.OWNER);
         } else {
-            response.setIsMember(false);
-            response.setCurrentUserRole(null);
+             Optional<GroupMember> memberOpt = groupMemberRepository.findByGroupIdAndUserId(groupId, currentUserId);
+             if (memberOpt.isPresent()) {
+                 response.setCurrentUserRole(memberOpt.get().getRole());
+             } else {
+                 Optional<GroupJoinRequest> pendingRequest = groupJoinRequestRepository
+                         .findByGroupIdAndUserIdAndStatus(groupId, currentUserId, JoinRequestStatus.PENDING);
+                 if (pendingRequest.isPresent()) {
+                     response.setCurrentUserRole(GroupRole.PENDING);
+                 } else {
+                     response.setCurrentUserRole(GroupRole.NONE);
+                 }
+             }
         }
 
         return response;
@@ -122,16 +138,30 @@ public class GroupService {
         if (groupMemberRepository.findByGroupIdAndUserId(groupId, currentUserId).isPresent()) {
             throw new RuntimeException("You are already a member of this group");
         }
-
-        // Kiểm tra đã có yêu cầu pending chưa
-        Optional<GroupJoinRequest> existingRequest = groupJoinRequestRepository
-                .findByGroupIdAndUserIdAndStatus(groupId, currentUserId, JoinRequestStatus.PENDING);
-
-        if (existingRequest.isPresent()) {
-            throw new RuntimeException("You already have a pending join request for this group");
+        
+        // Check pending requests
+        if (groupJoinRequestRepository.findByGroupIdAndUserIdAndStatus(groupId, currentUserId, JoinRequestStatus.PENDING).isPresent()) {
+             throw new RuntimeException("You already have a pending join request for this group");
         }
 
-        // Tạo join request
+        // Nếu Group là PUBLIC -> Join luôn
+        if (group.getPrivacy() == GroupPrivacy.PUBLIC) {
+             GroupMember newMember = new GroupMember();
+             newMember.setGroup(group);
+             newMember.setUserId(currentUserId);
+             newMember.setRole(GroupRole.MEMBER);
+             groupMemberRepository.save(newMember);
+             
+            JoinGroupResponse response = new JoinGroupResponse();
+            response.setGroupId(group.getId());
+            response.setGroupName(group.getName());
+            response.setUserId(currentUserId);
+            response.setStatus(JoinRequestStatus.APPROVED);
+            response.setRequestedAt(Instant.now());
+            return response;
+        } 
+        
+        // Nếu Group là PRIVATE -> Tạo Join Request
         GroupJoinRequest joinRequest = new GroupJoinRequest();
         joinRequest.setGroup(group);
         joinRequest.setUserId((currentUserId));
@@ -147,7 +177,6 @@ public class GroupService {
         response.setUserId(currentUserId);
         response.setStatus(savedRequest.getStatus());
         response.setRequestedAt(savedRequest.getRequestedAt());
-        response.setMessage("Join request sent successfully. Waiting for approval.");
 
         return response;
     }
@@ -180,7 +209,6 @@ public class GroupService {
         response.setGroupName(group.getName());
         response.setUserId(currentUserId);
         response.setLeftAt(Instant.now());
-        response.setMessage("You have successfully left the group.");
 
         return response;
     }
@@ -249,9 +277,6 @@ public class GroupService {
         response.setUserId(String.valueOf(joinRequest.getUserId()));
         response.setStatus(joinRequest.getStatus());
         response.setHandledAt(handledAt);
-        response.setMessage(approved ?
-                "Join request approved successfully. User is now a member." :
-                "Join request rejected.");
 
         return response;
     }
@@ -266,12 +291,12 @@ public class GroupService {
         Group group = groupRepository.findById(groupId)
                 .orElseThrow(() -> new RuntimeException("Group not found"));
 
-        // Kiểm tra người dùng có quyền xem danh sách thành viên không
+        boolean isPublic = group.getPrivacy() == GroupPrivacy.PUBLIC;
         boolean isOwner = group.getOwnerId().equals(currentUserId);
         boolean isMember = groupMemberRepository.findByGroupIdAndUserId(groupId, currentUserId).isPresent();
 
-        if (!isOwner && !isMember) {
-            throw new RuntimeException("You don't have permission to view members. Only members can view the member list.");
+        if (!isPublic && !isOwner && !isMember) {
+            throw new RuntimeException("This group is private. Only members can view the member list.");
         }
 
         // Lấy danh sách thành viên
@@ -323,6 +348,11 @@ public class GroupService {
         // Kiểm tra không thể thay đổi role của owner
         if (group.getOwnerId().equals(String.valueOf(member.getUserId()))) {
             throw new RuntimeException("Cannot change the role of the group owner");
+        }
+
+        // Kiểm tra validation role
+        if (newRole != GroupRole.ADMIN && newRole != GroupRole.MEMBER) {
+            throw new RuntimeException("Invalid role. Only ADMIN or MEMBER roles can be assigned.");
         }
 
         // Cập nhật role
@@ -390,13 +420,12 @@ public class GroupService {
         response.setGroupName(group.getName());
         response.setRemovedUserId(removedUserId);
         response.setRemovedAt(Instant.now());
-        response.setMessage("Member removed successfully from the group.");
 
         return response;
     }
 
     @Transactional
-    public UpdateGroupResponse updateGroup(UpdateGroupRequest request, MultipartFile backgroundImage) {
+    public UpdateGroupResponse updateGroup(UpdateGroupRequest request, MultipartFile backgroundImage, MultipartFile avatar) {
         // Lấy userId từ SecurityContext
         String currentUserId = SecurityUtil.getCurrentUserLogin()
                 .orElseThrow(() -> new RuntimeException("User not authenticated"));
@@ -413,16 +442,18 @@ public class GroupService {
         // Cập nhật thông tin nhóm
         group.setName(request.getName());
         group.setDescription(request.getDescription());
+        group.setPrivacy(GroupPrivacy.valueOf(request.getPrivacy().toUpperCase()));
 
         // Upload background image mới nếu có
         if (backgroundImage != null && !backgroundImage.isEmpty()) {
-            // Xóa hình ảnh cũ trên Cloudinary nếu có
-            if (group.getBackgroundImageUrl() != null) {
-                cloudinaryService.deleteImage(group.getBackgroundImageUrl());
-            }
-            // Upload hình ảnh mới
             String newImageUrl = cloudinaryService.uploadImage(backgroundImage);
-            group.setBackgroundImageUrl(newImageUrl);
+            group.setBackgroundUrl(newImageUrl);
+        }
+        
+         // Upload avatar mới nếu có
+        if (avatar != null && !avatar.isEmpty()) {
+            String newAvatarUrl = cloudinaryService.uploadImage(avatar);
+            group.setAvatarUrl(newAvatarUrl);
         }
 
         // Lưu thay đổi vào database
@@ -431,7 +462,7 @@ public class GroupService {
         // Convert sang response DTO sử dụng ModelMapper
         return groupConverter.toUpdateGroupResponse(updatedGroup);
     }
-
+    
     @Transactional(readOnly = true)
     public List<GroupMemberResponse> getGroupMembersInternal(String groupId) {
         // Method này dùng cho internal call từ các service khác
