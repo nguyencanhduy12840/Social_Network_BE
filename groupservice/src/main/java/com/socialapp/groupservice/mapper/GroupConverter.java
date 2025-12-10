@@ -25,8 +25,6 @@ public class GroupConverter {
     }
 
     public UpdateGroupResponse toUpdateGroupResponse(Group group) {
-        UpdateGroupResponse response = modelMapper.map(group, UpdateGroupResponse.class);
-        response.setMessage("Group information updated successfully");
-        return response;
+        return modelMapper.map(group, UpdateGroupResponse.class);
     }
 }

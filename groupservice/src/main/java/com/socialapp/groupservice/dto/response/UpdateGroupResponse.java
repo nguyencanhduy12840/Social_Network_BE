@@ -18,6 +18,5 @@ public class UpdateGroupResponse {
     private String description;
     private String backgroundImageUrl;
     private Instant updatedAt;
-    private String message;
 }
 

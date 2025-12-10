@@ -13,14 +13,9 @@ import java.time.Instant;
 @NoArgsConstructor
 public class CreateGroupResponse {
     private String id;
-
     private String name;
-
     private String ownerId;
-
     private String description;
-
     private String backgroundImageUrl;
-
     private Instant createdAt;
 }

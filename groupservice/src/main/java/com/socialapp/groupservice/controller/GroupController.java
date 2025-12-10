@@ -62,7 +62,7 @@ public class GroupController {
         return ResponseEntity.ok(response);
     }
 
-    @PostMapping("/{groupId}/join-requests/{requestId}/handle")
+    @PostMapping("/{groupId}/join-requests/{requestId}")
     public ResponseEntity<HandleJoinRequestResponse> handleJoinRequest(
             @PathVariable String groupId,
             @PathVariable String requestId,
@@ -77,7 +77,7 @@ public class GroupController {
         return ResponseEntity.ok(response);
     }
 
-    @PutMapping("/{groupId}/members/{memberId}/role")
+    @PutMapping("/{groupId}/members/{memberId}")
     public ResponseEntity<GroupMemberResponse> updateMemberRole(
             @PathVariable String groupId,
             @PathVariable String memberId,
