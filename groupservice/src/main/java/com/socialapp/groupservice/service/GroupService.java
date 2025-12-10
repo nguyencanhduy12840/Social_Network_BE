@@ -425,7 +425,7 @@ public class GroupService {
     }
 
     @Transactional
-    public UpdateGroupResponse updateGroup(UpdateGroupRequest request, MultipartFile backgroundImage, MultipartFile avatar) {
+    public UpdateGroupResponse updateGroup(UpdateGroupRequest request, MultipartFile background, MultipartFile avatar) {
         // Lấy userId từ SecurityContext
         String currentUserId = SecurityUtil.getCurrentUserLogin()
                 .orElseThrow(() -> new RuntimeException("User not authenticated"));
@@ -445,8 +445,8 @@ public class GroupService {
         group.setPrivacy(GroupPrivacy.valueOf(request.getPrivacy().toUpperCase()));
 
         // Upload background image mới nếu có
-        if (backgroundImage != null && !backgroundImage.isEmpty()) {
-            String newImageUrl = cloudinaryService.uploadImage(backgroundImage);
+        if (background != null && !background.isEmpty()) {
+            String newImageUrl = cloudinaryService.uploadImage(background);
             group.setBackgroundUrl(newImageUrl);
         }
         
