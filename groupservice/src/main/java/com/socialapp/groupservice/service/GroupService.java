@@ -425,6 +425,30 @@ public class GroupService {
     }
 
     @Transactional
+    public void deleteGroup(String groupId) {
+        // Lấy userId từ SecurityContext
+        String currentUserId = SecurityUtil.getCurrentUserLogin()
+                .orElseThrow(() -> new RuntimeException("User not authenticated"));
+
+        // Tìm group theo ID
+        Group group = groupRepository.findById(groupId)
+                .orElseThrow(() -> new RuntimeException("Group not found"));
+
+        // Kiểm tra người dùng có phải là chủ nhóm không
+        if (!group.getOwnerId().equals(currentUserId)) {
+            throw new RuntimeException("Only the group owner can delete the group");
+        }
+
+        // Xóa tất cả members
+        groupMemberRepository.deleteAllByGroupId(groupId);
+        
+        // Xóa tất cả join requests
+        groupJoinRequestRepository.deleteAllByGroupId(groupId);
+        
+        groupRepository.delete(group);
+    }
+
+    @Transactional
     public UpdateGroupResponse updateGroup(UpdateGroupRequest request, MultipartFile background, MultipartFile avatar) {
         // Lấy userId từ SecurityContext
         String currentUserId = SecurityUtil.getCurrentUserLogin()

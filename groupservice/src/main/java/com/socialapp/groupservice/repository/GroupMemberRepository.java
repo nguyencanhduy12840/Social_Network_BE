@@ -20,4 +20,7 @@ public interface GroupMemberRepository extends JpaRepository<GroupMember, String
 
     @Query("SELECT gm FROM GroupMember gm WHERE gm.group.id = :groupId")
     List<GroupMember> findAllByGroupId(@Param("groupId") String groupId);
+
+    @Query("DELETE FROM GroupMember gm WHERE gm.group.id = :groupId")
+    void deleteAllByGroupId(@Param("groupId") String groupId);
 }

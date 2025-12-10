@@ -20,5 +20,9 @@ public interface GroupJoinRequestRepository extends JpaRepository<GroupJoinReque
             @Param("groupId") String groupId,
             @Param("userId") String userId,
             @Param("status") JoinRequestStatus status);
+
+    @org.springframework.data.jpa.repository.Modifying
+    @Query("DELETE FROM GroupJoinRequest gjr WHERE gjr.group.id = :groupId")
+    void deleteAllByGroupId(@Param("groupId") String groupId);
 }
 
