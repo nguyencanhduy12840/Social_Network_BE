@@ -6,6 +6,7 @@ import com.socialapp.postservice.dto.response.GroupMemberResponse;
 import org.springframework.cloud.openfeign.FeignClient;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.RequestParam;
 
 import java.util.List;
 
@@ -15,5 +16,11 @@ public interface GroupClient {
 
     @GetMapping(value = "/group/internal/{groupId}/members")
     ApiResponse<List<GroupMemberResponse>> getGroupMembers(@PathVariable String groupId);
+
+    @GetMapping(value = "/group/internal/{groupId}/is-member")
+    Boolean isGroupMember(@PathVariable String groupId, @RequestParam("userId") String userId);
+
+    @GetMapping(value = "/group/internal/{groupId}/privacy")
+    String getGroupPrivacy(@PathVariable String groupId);
 }
 

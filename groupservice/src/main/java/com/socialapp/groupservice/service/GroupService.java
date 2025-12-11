@@ -617,30 +617,30 @@ public class GroupService {
         String currentUserId = SecurityUtil.getCurrentUserLogin().orElse(null);
 
         List<GroupMember> targetMemberships = groupMemberRepository.findAllByUserId(targetUserId);
-        
+
         Map<String, GroupRole> currentUserRoles = new HashMap<>();
         Map<String, JoinRequestStatus> currentUserRequests = new HashMap<>();
 
         if (currentUserId != null) {
             groupMemberRepository.findAllByUserId(currentUserId)
                     .forEach(m -> currentUserRoles.put(m.getGroup().getId(), m.getRole()));
-            
+
             groupJoinRequestRepository.findAllByUserIdAndStatus(currentUserId, JoinRequestStatus.PENDING)
                     .forEach(r -> currentUserRequests.put(r.getGroup().getId(), r.getStatus()));
         }
-        
+
         return targetMemberships.stream().map(member -> {
             Group group = member.getGroup();
-            
+
             GroupDetailResponse response = groupConverter.toGroupDetailResponse(group);
-            
+
             response.setAvatarUrl(group.getAvatarUrl());
             response.setBackgroundUrl(group.getBackgroundUrl());
             response.setPrivacy(group.getPrivacy());
-            
+
             Integer memberCount = groupMemberRepository.countMembersByGroupId(group.getId());
             response.setMemberCount(memberCount != null ? memberCount : 0);
-            
+
             if (currentUserId != null) {
                 if (currentUserRoles.containsKey(group.getId())) {
                     response.setRole(currentUserRoles.get(group.getId()));
@@ -653,8 +653,20 @@ public class GroupService {
                 response.setRole(null);
                 response.setJoinStatus(null);
             }
-            
+
             return response;
         }).toList();
+    }
+    
+    @Transactional(readOnly = true)
+    public boolean isGroupMember(String groupId, String userId) {
+        return groupMemberRepository.findByGroupIdAndUserId(groupId, userId).isPresent();
+    }
+
+    @Transactional(readOnly = true)
+    public String getGroupPrivacyInternal(String groupId) {
+        return groupRepository.findById(groupId)
+                .map(g -> g.getPrivacy().name())
+                .orElse(null);
     }
 }

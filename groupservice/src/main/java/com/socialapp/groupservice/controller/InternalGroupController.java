@@ -26,5 +26,14 @@ public class InternalGroupController {
                 .build();
         return ResponseEntity.ok(response);
     }
-}
+    
+    @GetMapping("/{groupId}/is-member")
+    public ResponseEntity<Boolean> isGroupMember(@PathVariable String groupId, @RequestParam String userId) {
+        return ResponseEntity.ok(groupService.isGroupMember(groupId, userId));
+    }
 
+    @GetMapping("/{groupId}/privacy")
+    public ResponseEntity<String> getGroupPrivacy(@PathVariable String groupId) {
+        return ResponseEntity.ok(groupService.getGroupPrivacyInternal(groupId));
+    }
+}

@@ -48,7 +48,8 @@ public class SecurityConfig {
                 "/comments/**",
                 "/userlikes/**",
                 "/seen",
-                "/seen/**"
+                "/seen/**",
+                "/group/**"
         };
         http
                 .csrf(c -> c.disable())

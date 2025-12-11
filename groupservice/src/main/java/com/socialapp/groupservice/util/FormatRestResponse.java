@@ -39,6 +39,10 @@ public class FormatRestResponse implements ResponseBodyAdvice<Object> {
             return body;
         }
 
+        if (path.contains("/internal")) {
+            return body;
+        }
+
         if (status >= 400) {
             return body;
         } else {
