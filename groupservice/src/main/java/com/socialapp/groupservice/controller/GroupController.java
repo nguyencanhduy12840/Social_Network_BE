@@ -39,6 +39,12 @@ public class GroupController {
         return ResponseEntity.ok(response);
     }
 
+    @GetMapping
+    public ResponseEntity<List<GroupDetailResponse>> getAllGroups() {
+        List<GroupDetailResponse> response = groupService.getAllGroups();
+        return ResponseEntity.ok(response);
+    }
+
     @PutMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<UpdateGroupResponse> updateGroup(
             @RequestPart("group") String request,
@@ -51,9 +57,9 @@ public class GroupController {
     }
 
     @DeleteMapping("/{groupId}")
-    public ResponseEntity<Void> deleteGroup(@PathVariable String groupId) {
+    public ResponseEntity<String> deleteGroup(@PathVariable String groupId) {
         groupService.deleteGroup(groupId);
-        return ResponseEntity.ok().build();
+        return ResponseEntity.ok("Delete group successfully");
     }
 
     @PostMapping("/{groupId}/join")

@@ -19,7 +19,9 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.time.Instant;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 @Service
@@ -123,6 +125,48 @@ public class GroupService {
         }
 
         return response;
+    }
+
+    @Transactional(readOnly = true)
+    public List<GroupDetailResponse> getAllGroups() {
+        String currentUserId = SecurityUtil.getCurrentUserLogin().orElse(null);
+        List<Group> groups = groupRepository.findAll();
+
+        Map<String, GroupRole> userRoles = new HashMap<>();
+        Map<String, JoinRequestStatus> userRequests = new HashMap<>();
+
+        if (currentUserId != null) {
+            groupMemberRepository.findAllByUserId(currentUserId)
+                    .forEach(m -> userRoles.put(m.getGroup().getId(), m.getRole()));
+            
+            groupJoinRequestRepository.findAllByUserIdAndStatus(currentUserId, JoinRequestStatus.PENDING)
+                    .forEach(r -> userRequests.put(r.getGroup().getId(), r.getStatus()));
+        }
+
+        return groups.stream().map(group -> {
+            GroupDetailResponse response = groupConverter.toGroupDetailResponse(group);
+            
+            response.setAvatarUrl(group.getAvatarUrl());
+            response.setBackgroundUrl(group.getBackgroundUrl());
+            response.setPrivacy(group.getPrivacy());
+            
+            Integer memberCount = groupMemberRepository.countMembersByGroupId(group.getId());
+            response.setMemberCount(memberCount != null ? memberCount : 0);
+
+            if (currentUserId != null) {
+                if (userRoles.containsKey(group.getId())) {
+                    response.setRole(userRoles.get(group.getId()));
+                    response.setJoinStatus(null);
+                } else {
+                    response.setRole(null);
+                    response.setJoinStatus(userRequests.get(group.getId()));
+                }
+            } else {
+                response.setRole(null);
+                response.setJoinStatus(null);
+            }
+            return response;
+        }).toList();
     }
     
     @Transactional
