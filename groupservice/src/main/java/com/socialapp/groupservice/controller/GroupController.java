@@ -40,9 +40,11 @@ public class GroupController {
     }
 
     @GetMapping
-    public ResponseEntity<List<GroupDetailResponse>> getAllGroups() {
-        List<GroupDetailResponse> response = groupService.getAllGroups();
-        return ResponseEntity.ok(response);
+    public ResponseEntity<List<GroupDetailResponse>> getAllGroups(@RequestParam(required = false) String userId) {
+        if (userId != null && !userId.isEmpty()) {
+            return ResponseEntity.ok(groupService.getJoinedGroups(userId));
+        }
+        return ResponseEntity.ok(groupService.getAllGroups());
     }
 
     @PutMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
