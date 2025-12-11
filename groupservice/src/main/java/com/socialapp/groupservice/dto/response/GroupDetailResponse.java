@@ -1,6 +1,8 @@
 package com.socialapp.groupservice.dto.response;
 
+import com.socialapp.groupservice.util.constant.GroupPrivacy;
 import com.socialapp.groupservice.util.constant.GroupRole;
+import com.socialapp.groupservice.util.constant.JoinRequestStatus;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -17,12 +19,13 @@ public class GroupDetailResponse {
     private String name;
     private String ownerId;
     private String description;
-    private String backgroundUrl;
     private String avatarUrl;
-    private String privacy;
+    private String backgroundUrl;
     private Instant createdAt;
     private Instant updatedAt;
     private Integer memberCount;
-    private GroupRole currentUserRole; // OWNER, ADMIN, MEMBER, NONE, PENDING
+    private GroupPrivacy privacy;
+    private GroupRole role;
+    private JoinRequestStatus joinStatus;
 }
 

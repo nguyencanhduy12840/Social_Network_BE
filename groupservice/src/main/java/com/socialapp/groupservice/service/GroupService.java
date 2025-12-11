@@ -100,30 +100,31 @@ public class GroupService {
 
         response.setAvatarUrl(group.getAvatarUrl());
         response.setBackgroundUrl(group.getBackgroundUrl());
-        response.setPrivacy(group.getPrivacy().name());
+        response.setPrivacy(GroupPrivacy.valueOf(group.getPrivacy().name()));
 
-        if (currentUserId == null) {
-            response.setCurrentUserRole(GroupRole.NONE);
-        } else if (currentUserId.equals(group.getOwnerId())) {
-            response.setCurrentUserRole(GroupRole.OWNER);
-        } else {
-             Optional<GroupMember> memberOpt = groupMemberRepository.findByGroupIdAndUserId(groupId, currentUserId);
-             if (memberOpt.isPresent()) {
-                 response.setCurrentUserRole(memberOpt.get().getRole());
-             } else {
-                 Optional<GroupJoinRequest> pendingRequest = groupJoinRequestRepository
+        if (currentUserId != null) {
+            Optional<GroupMember> memberOpt = groupMemberRepository.findByGroupIdAndUserId(groupId, currentUserId);
+            if (memberOpt.isPresent()) {
+                response.setRole(memberOpt.get().getRole());
+                response.setJoinStatus(null);
+            } else {
+                response.setRole(null);
+                 Optional<GroupJoinRequest> requestOpt = groupJoinRequestRepository
                          .findByGroupIdAndUserIdAndStatus(groupId, currentUserId, JoinRequestStatus.PENDING);
-                 if (pendingRequest.isPresent()) {
-                     response.setCurrentUserRole(GroupRole.PENDING);
+                 if (requestOpt.isPresent()) {
+                     response.setJoinStatus(JoinRequestStatus.PENDING);
                  } else {
-                     response.setCurrentUserRole(GroupRole.NONE);
+                     response.setJoinStatus(null);
                  }
-             }
+            }
+        } else {
+            response.setRole(null);
+            response.setJoinStatus(null);
         }
 
         return response;
     }
-
+    
     @Transactional
     public JoinGroupResponse joinGroup(String groupId) {
         // Lấy userId từ SecurityContext
@@ -171,7 +172,6 @@ public class GroupService {
 
         // Tạo response
         JoinGroupResponse response = new JoinGroupResponse();
-        response.setId(savedRequest.getId());
         response.setGroupId(group.getId());
         response.setGroupName(group.getName());
         response.setUserId(currentUserId);
@@ -273,7 +273,6 @@ public class GroupService {
         HandleJoinRequestResponse response = new HandleJoinRequestResponse();
         response.setRequestId(joinRequest.getId());
         response.setGroupId(group.getId());
-        response.setGroupName(group.getName());
         response.setUserId(String.valueOf(joinRequest.getUserId()));
         response.setStatus(joinRequest.getStatus());
         response.setHandledAt(handledAt);
@@ -306,7 +305,6 @@ public class GroupService {
         return members.stream()
                 .map(member -> {
                     GroupMemberResponse response = new GroupMemberResponse();
-                    response.setId(member.getId());
                     response.setUserId(String.valueOf(member.getUserId()));
                     response.setGroupId(groupId);
                     response.setRole(member.getRole());
@@ -322,32 +320,49 @@ public class GroupService {
         String currentUserId = SecurityUtil.getCurrentUserLogin()
                 .orElseThrow(() -> new RuntimeException("User not authenticated"));
 
-        // Tìm group theo ID
-        Group group = groupRepository.findById(groupId)
-                .orElseThrow(() -> new RuntimeException("Group not found"));
+        // Tìm member thực hiện hành động (actor)
+        GroupMember actor = groupMemberRepository.findByGroupIdAndUserId(groupId, currentUserId)
+                .orElseThrow(() -> new RuntimeException("You are not a member of this group"));
 
-        // Kiểm tra người dùng có quyền thay đổi role không (phải là owner hoặc admin)
-        boolean isOwner = group.getOwnerId().equals(currentUserId);
-        boolean isAdmin = groupMemberRepository.findByGroupIdAndUserId(groupId, currentUserId)
-                .map(member -> member.getRole() == GroupRole.ADMIN)
-                .orElse(false);
+        boolean isOwner = actor.getRole() == GroupRole.OWNER;
+        boolean isAdmin = actor.getRole() == GroupRole.ADMIN;
 
         if (!isOwner && !isAdmin) {
-            throw new RuntimeException("You don't have permission to update member roles. Only owner or admin can manage members.");
+            throw new RuntimeException("You don't have permission to update member roles.");
         }
 
-        // Tìm member cần thay đổi role
-        GroupMember member = groupMemberRepository.findById(memberId)
+        // Tìm member cần thay đổi role (target)
+        GroupMember targetMember = groupMemberRepository.findById(memberId)
                 .orElseThrow(() -> new RuntimeException("Member not found"));
 
-        // Kiểm tra member có thuộc group này không
-        if (!member.getGroup().getId().equals(groupId)) {
+        if (!targetMember.getGroup().getId().equals(groupId)) {
             throw new RuntimeException("Member does not belong to this group");
         }
 
-        // Kiểm tra không thể thay đổi role của owner
-        if (group.getOwnerId().equals(String.valueOf(member.getUserId()))) {
-            throw new RuntimeException("Cannot change the role of the group owner");
+        // Strict Permission Logic:
+        // Owner can update anyone (except logic usually prevents changing self role if it leaves group ownerless, but here simpler).
+        // Admin can ONLY update MEMBER. Target CANNOT be ADMIN or OWNER.
+        
+        if (targetMember.getRole() == GroupRole.OWNER) {
+             throw new RuntimeException("Cannot change the role of the group owner");
+        }
+
+        if (isAdmin) {
+            if (targetMember.getRole() == GroupRole.ADMIN) {
+                throw new RuntimeException("Admins cannot update other Admins.");
+            }
+            // Admin can only interact with Members.
+            // Also ensure newRole is not upgrading to Owner/Admin? 
+            // "Admin có thể update role thành viên" -> Usually implies managing members within their rank?
+            // If Admin promotes Member to Admin -> They become peers.
+            // If Admin promotes Member to Owner -> Only Owner can transfer ownership.
+            
+            if (newRole == GroupRole.OWNER) {
+                throw new RuntimeException("Only Owner can assign Owner role.");
+            }
+            // Let's allow Admin to promote Member to Admin if business allows? 
+            // User said: "không thể delete và update nhau". 
+            // If target is Member, Admin can update.
         }
 
         // Kiểm tra validation role
@@ -356,12 +371,10 @@ public class GroupService {
         }
 
         // Cập nhật role
-        member.setRole(newRole);
-        GroupMember updatedMember = groupMemberRepository.save(member);
+        targetMember.setRole(newRole);
+        GroupMember updatedMember = groupMemberRepository.save(targetMember);
 
-        // Tạo response
         GroupMemberResponse response = new GroupMemberResponse();
-        response.setId(updatedMember.getId());
         response.setUserId(String.valueOf(updatedMember.getUserId()));
         response.setGroupId(groupId);
         response.setRole(updatedMember.getRole());
@@ -380,45 +393,48 @@ public class GroupService {
         Group group = groupRepository.findById(groupId)
                 .orElseThrow(() -> new RuntimeException("Group not found"));
 
-        // Kiểm tra người dùng có quyền xóa thành viên không (phải là owner hoặc admin)
-        boolean isOwner = group.getOwnerId().equals(currentUserId);
-        boolean isAdmin = groupMemberRepository.findByGroupIdAndUserId(groupId, currentUserId)
-                .map(member -> member.getRole() == GroupRole.ADMIN)
-                .orElse(false);
+        // Tìm member thực hiện hành động (actor)
+        GroupMember actor = groupMemberRepository.findByGroupIdAndUserId(groupId, currentUserId)
+                .orElseThrow(() -> new RuntimeException("You are not a member of this group"));
+
+        boolean isOwner = actor.getRole() == GroupRole.OWNER;
+        boolean isAdmin = actor.getRole() == GroupRole.ADMIN;
 
         if (!isOwner && !isAdmin) {
-            throw new RuntimeException("You don't have permission to remove members. Only owner or admin can remove members.");
+             throw new RuntimeException("You don't have permission to remove members.");
         }
 
-        // Tìm member cần xóa
-        GroupMember member = groupMemberRepository.findById(memberId)
+        // Tìm member cần xóa (target)
+        GroupMember targetMember = groupMemberRepository.findById(memberId)
                 .orElseThrow(() -> new RuntimeException("Member not found"));
 
-        // Kiểm tra member có thuộc group này không
-        if (!member.getGroup().getId().equals(groupId)) {
+        if (!targetMember.getGroup().getId().equals(groupId)) {
             throw new RuntimeException("Member does not belong to this group");
         }
 
-        // Kiểm tra không thể xóa owner
-        if (group.getOwnerId().equals(String.valueOf(member.getUserId()))) {
+        // Strict Permission Check
+        if (targetMember.getRole() == GroupRole.OWNER) {
             throw new RuntimeException("Cannot remove the group owner");
         }
 
-        // Kiểm tra admin không thể xóa admin khác (chỉ owner mới có thể)
-        if (!isOwner && member.getRole() == GroupRole.ADMIN) {
-            throw new RuntimeException("Admin cannot remove another admin. Only owner can remove admins.");
+        if (isAdmin) {
+            // Admin cannot remove Admin
+            if (targetMember.getRole() == GroupRole.ADMIN) {
+                throw new RuntimeException("Admins cannot remove other Admins.");
+            }
+            // Admin can only remove Members
         }
 
-        String removedUserId = String.valueOf(member.getUserId());
+        String removedUserId = String.valueOf(targetMember.getUserId());
 
         // Xóa member
-        groupMemberRepository.delete(member);
+        groupMemberRepository.delete(targetMember);
 
         // Tạo response
         RemoveMemberResponse response = new RemoveMemberResponse();
         response.setGroupId(group.getId());
         response.setGroupName(group.getName());
-        response.setRemovedUserId(removedUserId);
+        response.setUserId(removedUserId);
         response.setRemovedAt(Instant.now());
 
         return response;
@@ -498,7 +514,6 @@ public class GroupService {
         return members.stream()
                 .map(member -> {
                     GroupMemberResponse response = new GroupMemberResponse();
-                    response.setId(member.getId());
                     response.setUserId(String.valueOf(member.getUserId()));
                     response.setGroupId(groupId);
                     response.setRole(member.getRole());

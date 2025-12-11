@@ -14,7 +14,7 @@ import java.time.Instant;
 public class RemoveMemberResponse {
     private String groupId;
     private String groupName;
-    private String removedUserId;
+    private String userId;
     private Instant removedAt;
 }
 

@@ -7,6 +7,8 @@ import lombok.Setter;
 
 import java.time.Instant;
 
+import com.socialapp.groupservice.util.constant.GroupPrivacy;
+
 @Getter
 @Setter
 @AllArgsConstructor
@@ -16,6 +18,8 @@ public class CreateGroupResponse {
     private String name;
     private String ownerId;
     private String description;
-    private String backgroundImageUrl;
+    private String avatarUrl;
+    private String backgroundUrl;
+    private GroupPrivacy privacy;
     private Instant createdAt;
 }
