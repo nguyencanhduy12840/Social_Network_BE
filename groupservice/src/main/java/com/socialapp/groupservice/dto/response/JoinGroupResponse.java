@@ -13,6 +13,7 @@ import java.time.Instant;
 @AllArgsConstructor
 @NoArgsConstructor
 public class JoinGroupResponse {
+    private String id;
     private String groupId;
     private String groupName;
     private String userId;

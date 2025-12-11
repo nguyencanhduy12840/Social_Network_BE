@@ -78,9 +78,14 @@ public class GroupController {
     public ResponseEntity<HandleJoinRequestResponse> handleJoinRequest(
             @RequestBody HandleJoinRequestRequest request) {
         HandleJoinRequestResponse response = groupService.handleJoinRequest(
-                request.getGroupId(), 
                 request.getRequestId(), 
                 request.getApproved());
+        return ResponseEntity.ok(response);
+    }
+    
+    @GetMapping("/requests")
+    public ResponseEntity<List<JoinGroupResponse>> getGroupJoinRequests(@RequestBody GetGroupJoinRequestsRequest request) {
+        List<JoinGroupResponse> response = groupService.getGroupJoinRequests(request);
         return ResponseEntity.ok(response);
     }
 

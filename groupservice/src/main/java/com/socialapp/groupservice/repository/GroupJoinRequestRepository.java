@@ -27,5 +27,11 @@ public interface GroupJoinRequestRepository extends JpaRepository<GroupJoinReque
 
     @Query("SELECT gjr FROM GroupJoinRequest gjr WHERE gjr.userId = :userId AND gjr.status = :status")
     java.util.List<GroupJoinRequest> findAllByUserIdAndStatus(@Param("userId") String userId, @Param("status") JoinRequestStatus status);
+
+    @Query("SELECT gjr FROM GroupJoinRequest gjr WHERE gjr.group.id = :groupId")
+    java.util.List<GroupJoinRequest> findAllByGroupId(@Param("groupId") String groupId);
+
+    @Query("SELECT gjr FROM GroupJoinRequest gjr WHERE gjr.group.id = :groupId AND gjr.status = :status")
+    java.util.List<GroupJoinRequest> findAllByGroupIdAndStatus(@Param("groupId") String groupId, @Param("status") JoinRequestStatus status);
 }
 

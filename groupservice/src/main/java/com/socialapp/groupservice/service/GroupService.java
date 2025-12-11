@@ -1,8 +1,14 @@
 package com.socialapp.groupservice.service;
 
-import com.socialapp.groupservice.dto.request.CreateGroupRequest;
-import com.socialapp.groupservice.dto.request.UpdateGroupRequest;
-import com.socialapp.groupservice.dto.response.*;
+import com.socialapp.groupservice.dto.request.*;
+import com.socialapp.groupservice.dto.response.CreateGroupResponse;
+import com.socialapp.groupservice.dto.response.GroupDetailResponse;
+import com.socialapp.groupservice.dto.response.GroupMemberResponse;
+import com.socialapp.groupservice.dto.response.HandleJoinRequestResponse;
+import com.socialapp.groupservice.dto.response.JoinGroupResponse;
+import com.socialapp.groupservice.dto.response.LeaveGroupResponse;
+import com.socialapp.groupservice.dto.response.RemoveMemberResponse;
+import com.socialapp.groupservice.dto.response.UpdateGroupResponse;
 import com.socialapp.groupservice.entity.Group;
 import com.socialapp.groupservice.entity.GroupJoinRequest;
 import com.socialapp.groupservice.entity.GroupMember;
@@ -195,9 +201,10 @@ public class GroupService {
              newMember.setGroup(group);
              newMember.setUserId(currentUserId);
              newMember.setRole(GroupRole.MEMBER);
-             groupMemberRepository.save(newMember);
+             GroupMember savedMember = groupMemberRepository.save(newMember);
              
             JoinGroupResponse response = new JoinGroupResponse();
+            response.setId(savedMember.getId());
             response.setGroupId(group.getId());
             response.setGroupName(group.getName());
             response.setUserId(currentUserId);
@@ -216,6 +223,7 @@ public class GroupService {
 
         // Tạo response
         JoinGroupResponse response = new JoinGroupResponse();
+        response.setId(savedRequest.getId());
         response.setGroupId(group.getId());
         response.setGroupName(group.getName());
         response.setUserId(currentUserId);
@@ -258,14 +266,23 @@ public class GroupService {
     }
 
     @Transactional
-    public HandleJoinRequestResponse handleJoinRequest(String groupId, String requestId, Boolean approved) {
+    public HandleJoinRequestResponse handleJoinRequest(String requestId, Boolean approved) {
         // Lấy userId từ SecurityContext
         String currentUserId = SecurityUtil.getCurrentUserLogin()
                 .orElseThrow(() -> new RuntimeException("User not authenticated"));
 
-        // Tìm group theo ID
-        Group group = groupRepository.findById(groupId)
-                .orElseThrow(() -> new RuntimeException("Group not found"));
+        // Tìm join request
+        GroupJoinRequest joinRequest = groupJoinRequestRepository.findById(requestId)
+                .orElseThrow(() -> new RuntimeException("Join request not found"));
+
+        // Lấy group từ joinRequest
+        Group group = joinRequest.getGroup();
+        String groupId = group.getId();
+
+        // Kiểm tra trạng thái request
+        if (joinRequest.getStatus() != JoinRequestStatus.PENDING) {
+            throw new RuntimeException("This join request has already been handled");
+        }
 
         // Kiểm tra người dùng có quyền duyệt không (phải là owner hoặc admin)
         boolean isOwner = group.getOwnerId().equals(currentUserId);
@@ -275,20 +292,6 @@ public class GroupService {
 
         if (!isOwner && !isAdmin) {
             throw new RuntimeException("You don't have permission to handle join requests. Only owner or admin can approve/reject members.");
-        }
-
-        // Tìm join request
-        GroupJoinRequest joinRequest = groupJoinRequestRepository.findById(requestId)
-                .orElseThrow(() -> new RuntimeException("Join request not found"));
-
-        // Kiểm tra join request có thuộc group này không
-        if (!joinRequest.getGroup().getId().equals(groupId)) {
-            throw new RuntimeException("Join request does not belong to this group");
-        }
-
-        // Kiểm tra trạng thái request
-        if (joinRequest.getStatus() != JoinRequestStatus.PENDING) {
-            throw new RuntimeException("This join request has already been handled");
         }
 
         // Xử lý request
@@ -376,7 +379,7 @@ public class GroupService {
         }
 
         // Tìm member cần thay đổi role (target)
-        GroupMember targetMember = groupMemberRepository.findById(memberId)
+        GroupMember targetMember = groupMemberRepository.findByGroupIdAndUserId(groupId, memberId)
                 .orElseThrow(() -> new RuntimeException("Member not found"));
 
         if (!targetMember.getGroup().getId().equals(groupId)) {
@@ -427,6 +430,49 @@ public class GroupService {
         return response;
     }
 
+    @Transactional(readOnly = true)
+    public List<JoinGroupResponse> getGroupJoinRequests(GetGroupJoinRequestsRequest request) {
+        // Lấy userId từ SecurityContext
+        String currentUserId = SecurityUtil.getCurrentUserLogin()
+                .orElseThrow(() -> new RuntimeException("User not authenticated"));
+
+        String groupId = request.getGroupId();
+        
+        // Tìm group theo ID
+        Group group = groupRepository.findById(groupId)
+                .orElseThrow(() -> new RuntimeException("Group not found"));
+
+        // Kiểm tra permission: Chỉ Owner hoặc Admin mới được xem request
+        boolean isOwner = group.getOwnerId().equals(currentUserId);
+        boolean isAdmin = groupMemberRepository.findByGroupIdAndUserId(groupId, currentUserId)
+                .map(member -> member.getRole() == GroupRole.ADMIN)
+                .orElse(false);
+
+        if (!isOwner && !isAdmin) {
+            throw new RuntimeException("You don't have permission to view join requests.");
+        }
+
+        // Lấy danh sách request
+        List<GroupJoinRequest> requests;
+        if (request.getStatus() != null) {
+            requests = groupJoinRequestRepository.findAllByGroupIdAndStatus(groupId, request.getStatus());
+        } else {
+            requests = groupJoinRequestRepository.findAllByGroupId(groupId);
+        }
+
+        // Convert sang response DTO
+        return requests.stream()
+                .map(req -> new JoinGroupResponse(
+                        req.getId(),
+                        group.getId(),
+                        group.getName(),
+                        String.valueOf(req.getUserId()),
+                        req.getStatus(),
+                        req.getRequestedAt()
+                ))
+                .toList();
+    }
+    
     @Transactional
     public RemoveMemberResponse removeMember(String groupId, String memberId) {
         // Lấy userId từ SecurityContext
@@ -448,9 +494,8 @@ public class GroupService {
              throw new RuntimeException("You don't have permission to remove members.");
         }
 
-        // Tìm member cần xóa (target)
-        GroupMember targetMember = groupMemberRepository.findById(memberId)
-                .orElseThrow(() -> new RuntimeException("Member not found"));
+        GroupMember targetMember = groupMemberRepository.findByGroupIdAndUserId(groupId, memberId)
+                        .orElseThrow(() -> new RuntimeException("Member not found"));
 
         if (!targetMember.getGroup().getId().equals(groupId)) {
             throw new RuntimeException("Member does not belong to this group");
