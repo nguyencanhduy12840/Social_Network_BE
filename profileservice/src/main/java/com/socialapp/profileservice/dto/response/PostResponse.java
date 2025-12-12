@@ -20,7 +20,7 @@ public class PostResponse {
     @AllArgsConstructor
     @NoArgsConstructor
     public static class PostOne {
-        String id;
+    String id;
 
     String authorId;
     String groupId;

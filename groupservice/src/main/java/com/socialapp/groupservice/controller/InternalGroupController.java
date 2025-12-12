@@ -36,4 +36,9 @@ public class InternalGroupController {
     public ResponseEntity<String> getGroupPrivacy(@PathVariable String groupId) {
         return ResponseEntity.ok(groupService.getGroupPrivacyInternal(groupId));
     }
+    
+    @GetMapping("/count")
+    public ResponseEntity<Integer> getGroupCountByUserId(@RequestParam String userId) {
+        return ResponseEntity.ok(groupService.getGroupCountByUserId(userId));
+    }
 }

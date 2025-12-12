@@ -6,7 +6,7 @@ import lombok.experimental.FieldDefaults;
 import java.time.LocalDate;
 import java.util.List;
 
-import com.socialapp.profileservice.entity.UserProfile;
+
 
 @Data
 @Builder
@@ -23,7 +23,8 @@ public class UserProfileResponse {
     String bio;
     String gender;
     LocalDate dob;
+    Integer groupCount;
+    Integer friendCount;
     String friendStatus;
-    List<UserProfile> friendships;
     List<PostResponse.PostOne> posts;
 }

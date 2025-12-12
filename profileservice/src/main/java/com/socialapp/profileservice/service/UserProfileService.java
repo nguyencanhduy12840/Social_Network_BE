@@ -6,6 +6,7 @@ import com.socialapp.profileservice.dto.response.UserProfileResponse;
 import com.socialapp.profileservice.entity.UserProfile;
 import com.socialapp.profileservice.mapper.UserProfileConverter;
 import com.socialapp.profileservice.repository.UserProfileRepository;
+import com.socialapp.profileservice.repository.httpclient.GroupClient;
 import com.socialapp.profileservice.repository.httpclient.PostClient;
 import com.socialapp.profileservice.util.FriendshipStatus;
 import com.socialapp.profileservice.util.SecurityUtil;
@@ -24,14 +25,16 @@ public class UserProfileService {
     private final UserProfileConverter userProfileMapper;
     private final FriendshipService friendshipService;
     private final PostClient postClient;
+    private final GroupClient groupClient;
     private final CloudinaryService cloudinaryService;
 
-    public UserProfileService(UserProfileRepository userProfileRepository, UserProfileConverter userProfileMapper, FriendshipService friendshipService, PostClient postClient, CloudinaryService cloudinaryService) {
+    public UserProfileService(UserProfileRepository userProfileRepository, UserProfileConverter userProfileMapper, FriendshipService friendshipService, PostClient postClient, CloudinaryService cloudinaryService, GroupClient groupClient) {
         this.userProfileRepository = userProfileRepository;
         this.userProfileMapper = userProfileMapper;
         this.friendshipService = friendshipService;
         this.postClient = postClient;
         this.cloudinaryService = cloudinaryService;
+        this.groupClient = groupClient;
     }
 
     public UserProfileResponse createProfile(ProfileCreationRequest request) {
@@ -59,8 +62,20 @@ public class UserProfileService {
             userProfileResponse.setFriendStatus(friendshipStatus);
         }
 
+
         userProfileResponse.setPosts(postClient.getPosts(id).getData());
-        userProfileResponse.setFriendships(friendshipService.getFriends(id, 0, 100));
+        userProfileResponse.setFriendCount((int) friendshipService.getFriendCount(id));
+        try {
+            String userId = userProfile.getUserId();
+            log.info("Fetching group count for userId: {}", userId);
+            Integer groupCount = groupClient.getGroupCount(userId);
+            log.info("Group count for userId {}: {}", userId, groupCount);
+            userProfileResponse.setGroupCount(groupCount != null ? groupCount : 0);
+        } catch (Exception e) {
+            log.error("Error fetching group count for user: " + id, e);
+            userProfileResponse.setGroupCount(0);
+        }
+
 
         return userProfileResponse;
     }

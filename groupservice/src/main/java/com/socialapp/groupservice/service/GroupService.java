@@ -662,4 +662,9 @@ public class GroupService {
                 .map(g -> g.getPrivacy().name())
                 .orElse(null);
     }
+    
+    @Transactional(readOnly = true)
+    public int getGroupCountByUserId(String userId) {
+        return groupMemberRepository.findAllByUserId(userId).size();
+    }
 }

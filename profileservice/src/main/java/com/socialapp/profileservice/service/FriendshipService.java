@@ -38,11 +38,6 @@ public class FriendshipService {
         if (senderId.equals(receiverId))
             return "Cannot send friend request to yourself";
 
-        UserProfile sender = userProfileRepository.findByUserId(senderId)
-                .orElseThrow(() -> new RuntimeException("Sender not found"));
-        UserProfile receiver = userProfileRepository.findByUserId(receiverId)
-                .orElseThrow(() -> new RuntimeException("Receiver not found"));
-
         if (userProfileRepository.hasFriendshipBetween(senderId, receiverId))
             return "Friend request already exists or you are already friends";
 
@@ -126,14 +121,19 @@ public class FriendshipService {
     }
 
     @Transactional
-        public List<UserProfile> getPendingRequests(String userId, int page, int size) {
-                long skip = (long) page * size;
-                return userProfileRepository.findReceivedFriendRequests(userId, skip, size);
-        }
+    public List<UserProfile> getPendingRequests(String userId, int page, int size) {
+        long skip = (long) page * size;
+        return userProfileRepository.findReceivedFriendRequests(userId, skip, size);
+    }
 
 
-        @Transactional
-        public Boolean isFriend(String userId, String friendId) {
-            return userProfileRepository.hasFriendshipBetween(userId, friendId);
-        }
+    @Transactional
+    public Boolean isFriend(String userId, String friendId) {
+        return userProfileRepository.hasFriendshipBetween(userId, friendId);
+    }
+
+    @Transactional
+    public long getFriendCount(String userId) {
+        return userProfileRepository.countFriendsByUserId(userId);
+    }
 }

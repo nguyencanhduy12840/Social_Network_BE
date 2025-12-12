@@ -63,4 +63,9 @@ public interface UserProfileRepository extends Neo4jRepository<UserProfile, Stri
         SKIP $skip LIMIT $size
         """)
     List<UserProfile> findFriendsByUserId(String userId, long skip, long size);
+    @Query("""
+        MATCH (u:user_profile {userId:$userId})-[:FRIEND_WITH {status:'ACCEPTED'}]-(friend:user_profile)
+        RETURN COUNT(friend)
+        """)
+    long countFriendsByUserId(String userId);
 }
