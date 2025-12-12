@@ -1,5 +1,7 @@
 package com.socialapp.groupservice.dto.request;
 
+import com.socialapp.groupservice.util.constant.GroupPrivacy;
+
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -12,7 +14,7 @@ import lombok.Setter;
 public class CreateGroupRequest {
     private String name;
 
-    private String privacy;
+    private GroupPrivacy privacy;
     
     private String description;
 }

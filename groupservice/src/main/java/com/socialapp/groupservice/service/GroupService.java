@@ -64,7 +64,7 @@ public class GroupService {
         group.setOwnerId(currentUserId);
         group.setName(request.getName());
         group.setDescription(request.getDescription());
-        group.setPrivacy(GroupPrivacy.valueOf(request.getPrivacy().toUpperCase()));
+        group.setPrivacy(request.getPrivacy());
         
         // Upload background image
         if (background != null && !background.isEmpty()) {
@@ -571,7 +571,7 @@ public class GroupService {
         // Cập nhật thông tin nhóm
         group.setName(request.getName());
         group.setDescription(request.getDescription());
-        group.setPrivacy(GroupPrivacy.valueOf(request.getPrivacy().toUpperCase()));
+        group.setPrivacy(request.getPrivacy());
 
         // Upload background image mới nếu có
         if (background != null && !background.isEmpty()) {
