@@ -431,12 +431,10 @@ public class GroupService {
     }
 
     @Transactional(readOnly = true)
-    public List<JoinGroupResponse> getGroupJoinRequests(GetGroupJoinRequestsRequest request) {
+    public List<JoinGroupResponse> getGroupJoinRequests(String groupId) {
         // Lấy userId từ SecurityContext
         String currentUserId = SecurityUtil.getCurrentUserLogin()
                 .orElseThrow(() -> new RuntimeException("User not authenticated"));
-
-        String groupId = request.getGroupId();
         
         // Tìm group theo ID
         Group group = groupRepository.findById(groupId)
@@ -452,13 +450,8 @@ public class GroupService {
             throw new RuntimeException("You don't have permission to view join requests.");
         }
 
-        // Lấy danh sách request
-        List<GroupJoinRequest> requests;
-        if (request.getStatus() != null) {
-            requests = groupJoinRequestRepository.findAllByGroupIdAndStatus(groupId, request.getStatus());
-        } else {
-            requests = groupJoinRequestRepository.findAllByGroupId(groupId);
-        }
+        // Lấy danh sách PENDING requests
+        List<GroupJoinRequest> requests = groupJoinRequestRepository.findAllByGroupIdAndStatus(groupId, JoinRequestStatus.PENDING);
 
         // Convert sang response DTO
         return requests.stream()

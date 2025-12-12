@@ -76,18 +76,18 @@ public class GroupController {
         return ResponseEntity.ok(response);
     }
 
+    @GetMapping("/{groupId}/requests")
+    public ResponseEntity<List<JoinGroupResponse>> getGroupJoinRequests(@PathVariable String groupId) {
+        List<JoinGroupResponse> response = groupService.getGroupJoinRequests(groupId);
+        return ResponseEntity.ok(response);
+    }
+
     @PutMapping("/requests")
     public ResponseEntity<HandleJoinRequestResponse> handleJoinRequest(
             @RequestBody HandleJoinRequestRequest request) {
         HandleJoinRequestResponse response = groupService.handleJoinRequest(
                 request.getRequestId(), 
                 request.getApproved());
-        return ResponseEntity.ok(response);
-    }
-    
-    @GetMapping("/requests")
-    public ResponseEntity<List<JoinGroupResponse>> getGroupJoinRequests(@RequestBody GetGroupJoinRequestsRequest request) {
-        List<JoinGroupResponse> response = groupService.getGroupJoinRequests(request);
         return ResponseEntity.ok(response);
     }
 
