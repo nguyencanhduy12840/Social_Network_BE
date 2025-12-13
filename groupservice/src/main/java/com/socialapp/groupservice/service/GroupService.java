@@ -266,6 +266,30 @@ public class GroupService {
     }
 
     @Transactional
+    public void cancelJoinRequest(String requestId) {
+        // Lấy userId từ SecurityContext
+        String currentUserId = SecurityUtil.getCurrentUserLogin()
+                .orElseThrow(() -> new RuntimeException("User not authenticated"));
+
+        // Tìm join request
+        GroupJoinRequest joinRequest = groupJoinRequestRepository.findById(requestId)
+                .orElseThrow(() -> new RuntimeException("Join request not found"));
+
+        // Kiểm tra người dùng có phải là người gửi request không
+        if (!joinRequest.getUserId().equals(currentUserId)) {
+            throw new RuntimeException("You can only cancel your own join request");
+        }
+
+        // Kiểm tra trạng thái request phải là PENDING
+        if (joinRequest.getStatus() != JoinRequestStatus.PENDING) {
+            throw new RuntimeException("Only pending requests can be cancelled");
+        }
+
+        // Xóa request
+        groupJoinRequestRepository.delete(joinRequest);
+    }
+
+    @Transactional
     public HandleJoinRequestResponse handleJoinRequest(String requestId, Boolean approved) {
         // Lấy userId từ SecurityContext
         String currentUserId = SecurityUtil.getCurrentUserLogin()
@@ -463,6 +487,32 @@ public class GroupService {
                         req.getStatus(),
                         req.getRequestedAt()
                 ))
+                .toList();
+    }
+
+    @Transactional(readOnly = true)
+    public List<JoinGroupResponse> getMyPendingRequests() {
+        // Lấy userId từ SecurityContext
+        String currentUserId = SecurityUtil.getCurrentUserLogin()
+                .orElseThrow(() -> new RuntimeException("User not authenticated"));
+
+        // Lấy tất cả pending requests của user hiện tại
+        List<GroupJoinRequest> requests = groupJoinRequestRepository
+                .findAllByUserIdAndStatus(currentUserId, JoinRequestStatus.PENDING);
+
+        // Convert sang response DTO với thông tin group
+        return requests.stream()
+                .map(req -> {
+                    Group group = req.getGroup();
+                    return new JoinGroupResponse(
+                            req.getId(),
+                            group.getId(),
+                            group.getName(),
+                            currentUserId,
+                            req.getStatus(),
+                            req.getRequestedAt()
+                    );
+                })
                 .toList();
     }
     

@@ -82,6 +82,12 @@ public class GroupController {
         return ResponseEntity.ok(response);
     }
 
+    @GetMapping("/requests")
+    public ResponseEntity<List<JoinGroupResponse>> getMyPendingRequests() {
+        List<JoinGroupResponse> response = groupService.getMyPendingRequests();
+        return ResponseEntity.ok(response);
+    }
+
     @PutMapping("/requests")
     public ResponseEntity<HandleJoinRequestResponse> handleJoinRequest(
             @RequestBody HandleJoinRequestRequest request) {
@@ -89,6 +95,12 @@ public class GroupController {
                 request.getRequestId(), 
                 request.getApproved());
         return ResponseEntity.ok(response);
+    }
+
+    @DeleteMapping("/requests/{requestId}")
+    public ResponseEntity<String> cancelJoinRequest(@PathVariable String requestId) {
+        groupService.cancelJoinRequest(requestId);
+        return ResponseEntity.ok("Join request cancelled successfully");
     }
 
     @GetMapping("/{groupId}/members")
