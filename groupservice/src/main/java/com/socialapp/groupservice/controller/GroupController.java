@@ -98,9 +98,9 @@ public class GroupController {
     }
 
     @DeleteMapping("/requests/{requestId}")
-    public ResponseEntity<String> cancelJoinRequest(@PathVariable String requestId) {
-        groupService.cancelJoinRequest(requestId);
-        return ResponseEntity.ok("Join request cancelled successfully");
+    public ResponseEntity<CancelJoinRequestResponse> cancelJoinRequest(@PathVariable String requestId) {
+        CancelJoinRequestResponse response = groupService.cancelJoinRequest(requestId);
+        return ResponseEntity.ok(response);
     }
 
     @GetMapping("/{groupId}/members")

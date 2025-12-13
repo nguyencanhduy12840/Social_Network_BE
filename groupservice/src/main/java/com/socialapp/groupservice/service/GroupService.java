@@ -1,6 +1,7 @@
 package com.socialapp.groupservice.service;
 
 import com.socialapp.groupservice.dto.request.*;
+import com.socialapp.groupservice.dto.response.CancelJoinRequestResponse;
 import com.socialapp.groupservice.dto.response.CreateGroupResponse;
 import com.socialapp.groupservice.dto.response.GroupDetailResponse;
 import com.socialapp.groupservice.dto.response.GroupMemberResponse;
@@ -266,7 +267,7 @@ public class GroupService {
     }
 
     @Transactional
-    public void cancelJoinRequest(String requestId) {
+    public CancelJoinRequestResponse cancelJoinRequest(String requestId) {
         // Lấy userId từ SecurityContext
         String currentUserId = SecurityUtil.getCurrentUserLogin()
                 .orElseThrow(() -> new RuntimeException("User not authenticated"));
@@ -285,8 +286,24 @@ public class GroupService {
             throw new RuntimeException("Only pending requests can be cancelled");
         }
 
+        // Lưu thông tin group trước khi xóa
+        Group group = joinRequest.getGroup();
+        String groupId = group.getId();
+        String groupName = group.getName();
+        Instant cancelledAt = Instant.now();
+
         // Xóa request
         groupJoinRequestRepository.delete(joinRequest);
+
+        // Tạo response
+        CancelJoinRequestResponse response = new CancelJoinRequestResponse();
+        response.setRequestId(requestId);
+        response.setGroupId(groupId);
+        response.setGroupName(groupName);
+        response.setUserId(currentUserId);
+        response.setCancelledAt(cancelledAt);
+
+        return response;
     }
 
     @Transactional
