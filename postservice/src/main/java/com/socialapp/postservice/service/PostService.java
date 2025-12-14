@@ -67,6 +67,12 @@ public class PostService {
             }
         }
 
+        if (groupId != null && !groupId.isEmpty()) {
+             Boolean isMember = groupClient.isGroupMember(groupId, userId);
+             if (!Boolean.TRUE.equals(isMember)) {
+                 throw new RuntimeException("You are not a member of this group");
+             }
+        }
 
         Post post = Post.builder()
                 .authorId(userId)
@@ -329,18 +335,61 @@ public class PostService {
         return updatedPosts;
      }
 
-        public List<OneUserProfileResponse.UserProfileOne> getUsersWhoSeenPost(String postId) {
-            Optional<Post> post = postRepository.findById(postId);
-            if(post.isPresent()){
-                Post currentPost = post.get();
-                List<String> seenUserIds = currentPost.getSeenBy();
-                List<OneUserProfileResponse.UserProfileOne> seenUsers = new ArrayList<>();
-                for(String userId : seenUserIds){
-                    OneUserProfileResponse authorProfile = profileClient.getUserProfile(userId);
-                    seenUsers.add(authorProfile.getData());
-                }
-                return seenUsers;
-            }
-            return null;
+     public List<OneUserProfileResponse.UserProfileOne> getUsersWhoSeenPost(String postId) {
+         Optional<Post> post = postRepository.findById(postId);
+         if (post.isPresent()) {
+             Post currentPost = post.get();
+             List<String> seenUserIds = currentPost.getSeenBy();
+             List<OneUserProfileResponse.UserProfileOne> seenUsers = new ArrayList<>();
+             for (String userId : seenUserIds) {
+                 OneUserProfileResponse authorProfile = profileClient.getUserProfile(userId);
+                 seenUsers.add(authorProfile.getData());
+             }
+             return seenUsers;
+         }
+         return null;
+     }
+        
+    public PagedPostResponse getGroupPosts(String groupId, int page, int size) {
+        String currentUserId = SecurityUtil.getCurrentUserLogin()
+                .orElseThrow(() -> new RuntimeException("User not authenticated"));
+
+        // Check group privacy
+        String privacy = groupClient.getGroupPrivacy(groupId);
+        if (privacy == null) {
+            throw new RuntimeException("Group not found");
         }
+
+        boolean isMember = Boolean.TRUE.equals(groupClient.isGroupMember(groupId, currentUserId));
+
+        if ("PRIVATE".equalsIgnoreCase(privacy) && !isMember) {
+            throw new RuntimeException("Access denied. This is a private group.");
+        }
+
+        Pageable pageable = PageRequest.of(page, size,
+                org.springframework.data.domain.Sort.by(
+                        org.springframework.data.domain.Sort.Direction.DESC, "createdAt"
+                ));
+
+        Page<Post> postsPage = postRepository.findAllByGroupIdOrderByCreatedAtDesc(groupId, pageable);
+
+        // Convert posts to response
+        List<PostResponse> postResponses = new ArrayList<>();
+        for (Post post : postsPage.getContent()) {
+            PostResponse postResponse = postConverter.convertToPostResponse(post);
+            OneUserProfileResponse authorProfile = profileClient.getUserProfile(post.getAuthorId());
+            postResponse.setAuthorProfile(authorProfile.getData());
+            postResponses.add(postResponse);
+        }
+
+        return PagedPostResponse.builder()
+                .posts(postResponses)
+                .currentPage(postsPage.getNumber())
+                .totalPages(postsPage.getTotalPages())
+                .totalElements(postsPage.getTotalElements())
+                .pageSize(postsPage.getSize())
+                .hasNext(postsPage.hasNext())
+                .hasPrevious(postsPage.hasPrevious())
+                .build();
+    }
 }

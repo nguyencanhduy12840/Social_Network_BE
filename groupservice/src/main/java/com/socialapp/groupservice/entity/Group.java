@@ -1,6 +1,7 @@
 package com.socialapp.groupservice.entity;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.socialapp.groupservice.util.constant.GroupPrivacy;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -27,7 +28,11 @@ public class Group {
 
     private String description;
 
-    private String backgroundImageUrl;
+    private String avatarUrl;
+    
+    private String backgroundUrl;
+
+    private GroupPrivacy privacy;
 
     private Instant createdAt;
 

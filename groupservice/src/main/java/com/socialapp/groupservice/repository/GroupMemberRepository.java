@@ -2,6 +2,7 @@ package com.socialapp.groupservice.repository;
 
 import com.socialapp.groupservice.entity.GroupMember;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
@@ -20,4 +21,11 @@ public interface GroupMemberRepository extends JpaRepository<GroupMember, String
 
     @Query("SELECT gm FROM GroupMember gm WHERE gm.group.id = :groupId")
     List<GroupMember> findAllByGroupId(@Param("groupId") String groupId);
+
+    @Modifying
+    @Query("DELETE FROM GroupMember gm WHERE gm.group.id = :groupId")
+    void deleteAllByGroupId(@Param("groupId") String groupId);
+
+    @Query("SELECT gm FROM GroupMember gm WHERE gm.userId = :userId")
+    List<GroupMember> findAllByUserId(@Param("userId") String userId);
 }

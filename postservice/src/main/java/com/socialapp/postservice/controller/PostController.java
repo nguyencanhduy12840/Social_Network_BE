@@ -56,6 +56,15 @@ public class PostController {
         return ResponseEntity.ok().body(pagedResponse);
      }
 
+     @GetMapping("/group/{groupId}")
+     public ResponseEntity<PagedPostResponse> getGroupPosts(
+             @PathVariable String groupId,
+             @RequestParam(defaultValue = "0") int page,
+             @RequestParam(defaultValue = "10") int size) {
+         PagedPostResponse pagedResponse = postService.getGroupPosts(groupId, page, size);
+         return ResponseEntity.ok(pagedResponse);
+     }
+
      @PutMapping("/update-post")
      public ResponseEntity<Post> updatePost(@RequestParam("postId") String postId,
                                             @RequestParam(required = false) String content,

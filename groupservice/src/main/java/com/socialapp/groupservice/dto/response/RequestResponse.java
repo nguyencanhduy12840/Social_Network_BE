@@ -6,19 +6,13 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
-import java.time.Instant;
-
 @Getter
 @Setter
 @AllArgsConstructor
 @NoArgsConstructor
-public class HandleJoinRequestResponse {
-    private String requestId;
-    private String groupId;
-    private String groupName;
-    private String userId;
+public class RequestResponse {
+    private String id;
+    private GroupResponse group;
+    private UserResponse user;
     private JoinRequestStatus status;
-    private Instant handledAt;
-    private String message;
 }
-

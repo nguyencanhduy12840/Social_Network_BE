@@ -7,6 +7,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.util.List;
 import java.util.Optional;
 
 @Repository
@@ -20,5 +21,21 @@ public interface GroupJoinRequestRepository extends JpaRepository<GroupJoinReque
             @Param("groupId") String groupId,
             @Param("userId") String userId,
             @Param("status") JoinRequestStatus status);
+
+    @org.springframework.data.jpa.repository.Modifying
+    @Query("DELETE FROM GroupJoinRequest gjr WHERE gjr.group.id = :groupId")
+    void deleteAllByGroupId(@Param("groupId") String groupId);
+
+    @Query("SELECT gjr FROM GroupJoinRequest gjr WHERE gjr.group.id = :groupId AND gjr.userId = :userId")
+    List<GroupJoinRequest> findAllByGroupIdAndUserId(@Param("groupId") String groupId, @Param("userId") String userId);
+
+    @Query("SELECT gjr FROM GroupJoinRequest gjr WHERE gjr.userId = :userId AND gjr.status = :status")
+    List<GroupJoinRequest> findAllByUserIdAndStatus(@Param("userId") String userId, @Param("status") JoinRequestStatus status);
+
+    @Query("SELECT gjr FROM GroupJoinRequest gjr WHERE gjr.group.id = :groupId")
+    List<GroupJoinRequest> findAllByGroupId(@Param("groupId") String groupId);
+
+    @Query("SELECT gjr FROM GroupJoinRequest gjr WHERE gjr.group.id = :groupId AND gjr.status = :status")
+    List<GroupJoinRequest> findAllByGroupIdAndStatus(@Param("groupId") String groupId, @Param("status") JoinRequestStatus status);
 }
 

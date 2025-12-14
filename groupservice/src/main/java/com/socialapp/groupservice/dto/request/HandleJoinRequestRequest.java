@@ -11,6 +11,5 @@ import lombok.Setter;
 @NoArgsConstructor
 public class HandleJoinRequestRequest {
     private String requestId;
-    private Boolean approved; // true = approve, false = reject
+    private Boolean approved;
 }
-

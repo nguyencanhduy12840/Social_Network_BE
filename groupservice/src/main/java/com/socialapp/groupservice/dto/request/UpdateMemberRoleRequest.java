@@ -11,6 +11,8 @@ import lombok.Setter;
 @AllArgsConstructor
 @NoArgsConstructor
 public class UpdateMemberRoleRequest {
+    private String groupId;
+    private String memberId;
     private GroupRole role;
 }
 
