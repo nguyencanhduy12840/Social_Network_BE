@@ -11,6 +11,6 @@ import org.springframework.web.bind.annotation.RequestParam;
 public interface GroupClient {
 
     @GetMapping("/count")
-    Integer getGroupCount(@RequestParam("userId") String userId);
+    Integer getGroupCount(@RequestParam String userId);
 }
 

@@ -23,13 +23,13 @@ public class GroupController {
     }
 
     @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    public ResponseEntity<CreateGroupResponse> createGroup(
+    public ResponseEntity<GroupResponse> createGroup(
             @RequestPart("group") String request,
             @RequestPart(value = "background", required = false) MultipartFile background,
             @RequestPart(value = "avatar", required = false) MultipartFile avatar) throws JsonProcessingException {
         ObjectMapper mapper = new ObjectMapper();
         CreateGroupRequest createGroupRequest = mapper.readValue(request, CreateGroupRequest.class);
-        CreateGroupResponse response = groupService.createGroup(createGroupRequest, background, avatar);
+        GroupResponse response = groupService.createGroup(createGroupRequest, background, avatar);
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
@@ -40,7 +40,7 @@ public class GroupController {
     }
 
     @GetMapping
-    public ResponseEntity<List<GroupDetailResponse>> getAllGroups(@RequestParam(required = false) String userId) {
+    public ResponseEntity<List<GroupResponse>> getAllGroups(@RequestParam(required = false) String userId) {
         if (userId != null && !userId.isEmpty()) {
             return ResponseEntity.ok(groupService.getJoinedGroups(userId));
         }
@@ -48,13 +48,13 @@ public class GroupController {
     }
 
     @PutMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    public ResponseEntity<UpdateGroupResponse> updateGroup(
+    public ResponseEntity<GroupResponse> updateGroup(
             @RequestPart("group") String request,
             @RequestPart(value = "background", required = false) MultipartFile background,
             @RequestPart(value = "avatar", required = false) MultipartFile avatar) throws JsonProcessingException {
         ObjectMapper mapper = new ObjectMapper();
         UpdateGroupRequest updateGroupRequest = mapper.readValue(request, UpdateGroupRequest.class);
-        UpdateGroupResponse response = groupService.updateGroup(updateGroupRequest, background, avatar);
+        GroupResponse response = groupService.updateGroup(updateGroupRequest, background, avatar);
         return ResponseEntity.ok(response);
     }
 
@@ -65,61 +65,62 @@ public class GroupController {
     }
 
     @PostMapping("/{groupId}/join")
-    public ResponseEntity<JoinGroupResponse> joinGroup(@PathVariable String groupId) {
-        JoinGroupResponse response = groupService.joinGroup(groupId);
+    public ResponseEntity<RequestResponse> joinGroup(@PathVariable String groupId) {
+        RequestResponse response = groupService.joinGroup(groupId);
         return ResponseEntity.ok(response);
     }
 
     @DeleteMapping("/{groupId}/leave")
-    public ResponseEntity<LeaveGroupResponse> leaveGroup(@PathVariable String groupId) {
-        LeaveGroupResponse response = groupService.leaveGroup(groupId);
-        return ResponseEntity.ok(response);
-    }
-
-    @GetMapping("/{groupId}/requests")
-    public ResponseEntity<List<JoinGroupResponse>> getGroupJoinRequests(@PathVariable String groupId) {
-        List<JoinGroupResponse> response = groupService.getGroupJoinRequests(groupId);
+    public ResponseEntity<String> leaveGroup(@PathVariable String groupId) {
+        String response = groupService.leaveGroup(groupId);
         return ResponseEntity.ok(response);
     }
 
     @GetMapping("/requests")
-    public ResponseEntity<List<JoinGroupResponse>> getMyPendingRequests() {
-        List<JoinGroupResponse> response = groupService.getMyPendingRequests();
+    public ResponseEntity<List<RequestResponse>> getMyPendingRequests() {
+        List<RequestResponse> response = groupService.getMyPendingRequests();
+        return ResponseEntity.ok(response);
+    }
+    
+    @GetMapping("/{groupId}/requests")
+    public ResponseEntity<List<RequestResponse>> getGroupJoinRequests(@PathVariable String groupId) {
+        List<RequestResponse> response = groupService.getGroupJoinRequests(groupId);
         return ResponseEntity.ok(response);
     }
 
     @PutMapping("/requests")
-    public ResponseEntity<HandleJoinRequestResponse> handleJoinRequest(
+    public ResponseEntity<RequestResponse> handleJoinRequest(
             @RequestBody HandleJoinRequestRequest request) {
-        HandleJoinRequestResponse response = groupService.handleJoinRequest(
+        RequestResponse response = groupService.handleJoinRequest(
                 request.getRequestId(), 
                 request.getApproved());
         return ResponseEntity.ok(response);
     }
 
-    @DeleteMapping("/requests/{requestId}")
-    public ResponseEntity<CancelJoinRequestResponse> cancelJoinRequest(@PathVariable String requestId) {
-        CancelJoinRequestResponse response = groupService.cancelJoinRequest(requestId);
+    @DeleteMapping("/{groupId}/requests")
+    public ResponseEntity<String> cancelJoinRequest(@PathVariable String groupId) {
+        String response = groupService.cancelJoinRequest(groupId);
         return ResponseEntity.ok(response);
     }
 
     @GetMapping("/{groupId}/members")
-    public ResponseEntity<List<GroupMemberResponse>> getGroupMembers(@PathVariable String groupId) {
-        List<GroupMemberResponse> response = groupService.getGroupMembers(groupId);
+    public ResponseEntity<List<MemberResponse>> getGroupMembers(@PathVariable String groupId) {
+        List<MemberResponse> response = groupService.getGroupMembers(groupId);
         return ResponseEntity.ok(response);
     }
 
     @PutMapping("/members")
-    public ResponseEntity<GroupMemberResponse> updateMemberRole(
+    public ResponseEntity<MemberResponse> updateMemberRole(
             @RequestBody UpdateMemberRoleRequest request) {
-        GroupMemberResponse response = groupService.updateMemberRole(request.getGroupId(), request.getMemberId(), request.getRole());
+        MemberResponse response = groupService.updateMemberRole(request.getGroupId(), request.getMemberId(), request.getRole());
         return ResponseEntity.ok(response);
     }
 
-    @DeleteMapping("/members")
-    public ResponseEntity<RemoveMemberResponse> removeMember(
-            @RequestBody RemoveMemberRequest request) {
-        RemoveMemberResponse response = groupService.removeMember(request.getGroupId(), request.getMemberId());
+    @DeleteMapping("/{groupId}/members/{memberId}")
+    public ResponseEntity<String> removeMember(
+            @PathVariable String memberId,
+            @PathVariable String groupId) {
+        String response = groupService.removeMember(groupId, memberId);
         return ResponseEntity.ok(response);
     }
 }

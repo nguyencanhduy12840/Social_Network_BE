@@ -1,7 +1,7 @@
 package com.socialapp.groupservice.controller;
 
 import com.socialapp.groupservice.dto.response.ApiResponse;
-import com.socialapp.groupservice.dto.response.GroupMemberResponse;
+import com.socialapp.groupservice.dto.response.MemberResponse;
 import com.socialapp.groupservice.service.GroupService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -19,9 +19,9 @@ public class InternalGroupController {
     }
 
     @GetMapping("/{groupId}/members")
-    public ResponseEntity<ApiResponse<List<GroupMemberResponse>>> getGroupMembersInternal(@PathVariable String groupId) {
-        List<GroupMemberResponse> members = groupService.getGroupMembersInternal(groupId);
-        ApiResponse<List<GroupMemberResponse>> response = ApiResponse.<List<GroupMemberResponse>>builder()
+    public ResponseEntity<ApiResponse<List<MemberResponse>>> getGroupMembersInternal(@PathVariable String groupId) {
+        List<MemberResponse> members = groupService.getGroupMembersInternal(groupId);
+        ApiResponse<List<MemberResponse>> response = ApiResponse.<List<MemberResponse>>builder()
                 .data(members)
                 .build();
         return ResponseEntity.ok(response);

@@ -1,15 +1,8 @@
 package com.socialapp.groupservice.service;
 
+import com.socialapp.groupservice.client.ProfileClient;
 import com.socialapp.groupservice.dto.request.*;
-import com.socialapp.groupservice.dto.response.CancelJoinRequestResponse;
-import com.socialapp.groupservice.dto.response.CreateGroupResponse;
-import com.socialapp.groupservice.dto.response.GroupDetailResponse;
-import com.socialapp.groupservice.dto.response.GroupMemberResponse;
-import com.socialapp.groupservice.dto.response.HandleJoinRequestResponse;
-import com.socialapp.groupservice.dto.response.JoinGroupResponse;
-import com.socialapp.groupservice.dto.response.LeaveGroupResponse;
-import com.socialapp.groupservice.dto.response.RemoveMemberResponse;
-import com.socialapp.groupservice.dto.response.UpdateGroupResponse;
+import com.socialapp.groupservice.dto.response.*;
 import com.socialapp.groupservice.entity.Group;
 import com.socialapp.groupservice.entity.GroupJoinRequest;
 import com.socialapp.groupservice.entity.GroupMember;
@@ -25,10 +18,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.time.Instant;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 
 @Service
@@ -43,19 +33,51 @@ public class GroupService {
     private final GroupMemberRepository groupMemberRepository;
 
     private final GroupJoinRequestRepository groupJoinRequestRepository;
+    
+    private final ProfileClient profileClient;
 
     public GroupService(GroupRepository groupRepository, GroupConverter groupConverter,
                         CloudinaryService cloudinaryService, GroupMemberRepository groupMemberRepository,
-                        GroupJoinRequestRepository groupJoinRequestRepository) {
+            GroupJoinRequestRepository groupJoinRequestRepository, ProfileClient profileClient) {
         this.cloudinaryService = cloudinaryService;
         this.groupConverter = groupConverter;
         this.groupRepository = groupRepository;
         this.groupMemberRepository = groupMemberRepository;
         this.groupJoinRequestRepository = groupJoinRequestRepository;
+        this.profileClient = profileClient;
+    }
+    
+     private UserResponse buildUserResponse(String userId) {
+        try {
+            OneUserProfileResponse response = profileClient.getUserProfile(userId);
+            if (response != null && response.getData() != null) {
+                OneUserProfileResponse.UserProfileOne profile = response.getData();
+                return new UserResponse(
+                    profile.getId(),
+                    profile.getUsername(),
+                    profile.getAvatarUrl()
+                );
+            }
+        } catch (Exception e) {
+            System.err.println("Error fetching profile for user " + userId + ": " + e.getMessage());
+        }
+        return new UserResponse(userId, "Unknown User", null);
+    }
+    
+    private GroupResponse buildGroupResponse(Group group) {
+        Integer memberCount = groupMemberRepository.countMembersByGroupId(group.getId());
+        return new GroupResponse(
+            group.getId(),
+            group.getName(),
+            group.getDescription(),
+            group.getAvatarUrl(),
+            memberCount != null ? memberCount : 0,
+            group.getPrivacy()
+        );
     }
 
     @Transactional
-    public CreateGroupResponse createGroup(CreateGroupRequest request, MultipartFile background, MultipartFile avatar) {
+    public GroupResponse createGroup(CreateGroupRequest request, MultipartFile background, MultipartFile avatar) {
         // Lấy userId từ SecurityContext
         String currentUserId = SecurityUtil.getCurrentUserLogin()
                 .orElseThrow(() -> new RuntimeException("User not authenticated"));
@@ -89,7 +111,7 @@ public class GroupService {
         ownerMember.setRole(GroupRole.OWNER);
         groupMemberRepository.save(ownerMember);
 
-        return groupConverter.toCreateGroupResponse(savedGroup);
+        return groupConverter.toGroupResponse(savedGroup);
     }
 
     @Transactional(readOnly = true)
@@ -135,49 +157,15 @@ public class GroupService {
     }
 
     @Transactional(readOnly = true)
-    public List<GroupDetailResponse> getAllGroups() {
-        String currentUserId = SecurityUtil.getCurrentUserLogin().orElse(null);
+    public List<GroupResponse> getAllGroups() {
         List<Group> groups = groupRepository.findAll();
-
-        Map<String, GroupRole> userRoles = new HashMap<>();
-        Map<String, JoinRequestStatus> userRequests = new HashMap<>();
-
-        if (currentUserId != null) {
-            groupMemberRepository.findAllByUserId(currentUserId)
-                    .forEach(m -> userRoles.put(m.getGroup().getId(), m.getRole()));
-            
-            groupJoinRequestRepository.findAllByUserIdAndStatus(currentUserId, JoinRequestStatus.PENDING)
-                    .forEach(r -> userRequests.put(r.getGroup().getId(), r.getStatus()));
-        }
-
-        return groups.stream().map(group -> {
-            GroupDetailResponse response = groupConverter.toGroupDetailResponse(group);
-            
-            response.setAvatarUrl(group.getAvatarUrl());
-            response.setBackgroundUrl(group.getBackgroundUrl());
-            response.setPrivacy(group.getPrivacy());
-            
-            Integer memberCount = groupMemberRepository.countMembersByGroupId(group.getId());
-            response.setMemberCount(memberCount != null ? memberCount : 0);
-
-            if (currentUserId != null) {
-                if (userRoles.containsKey(group.getId())) {
-                    response.setRole(userRoles.get(group.getId()));
-                    response.setJoinStatus(null);
-                } else {
-                    response.setRole(null);
-                    response.setJoinStatus(userRequests.get(group.getId()));
-                }
-            } else {
-                response.setRole(null);
-                response.setJoinStatus(null);
-            }
-            return response;
-        }).toList();
+        return groups.stream()
+                .map(this::buildGroupResponse)
+                .toList();
     }
     
     @Transactional
-    public JoinGroupResponse joinGroup(String groupId) {
+    public RequestResponse joinGroup(String groupId) {
         // Lấy userId từ SecurityContext
         String currentUserId = SecurityUtil.getCurrentUserLogin()
                 .orElseThrow(() -> new RuntimeException("User not authenticated"));
@@ -204,13 +192,11 @@ public class GroupService {
              newMember.setRole(GroupRole.MEMBER);
              GroupMember savedMember = groupMemberRepository.save(newMember);
              
-            JoinGroupResponse response = new JoinGroupResponse();
+            RequestResponse response = new RequestResponse();
             response.setId(savedMember.getId());
-            response.setGroupId(group.getId());
-            response.setGroupName(group.getName());
-            response.setUserId(currentUserId);
+            response.setUser(buildUserResponse(currentUserId));
+            response.setGroup(buildGroupResponse(group));
             response.setStatus(JoinRequestStatus.APPROVED);
-            response.setRequestedAt(Instant.now());
             return response;
         } 
         
@@ -223,19 +209,17 @@ public class GroupService {
         GroupJoinRequest savedRequest = groupJoinRequestRepository.save(joinRequest);
 
         // Tạo response
-        JoinGroupResponse response = new JoinGroupResponse();
+        RequestResponse response = new RequestResponse();
         response.setId(savedRequest.getId());
-        response.setGroupId(group.getId());
-        response.setGroupName(group.getName());
-        response.setUserId(currentUserId);
+        response.setUser(buildUserResponse(currentUserId));
+        response.setGroup(buildGroupResponse(group));
         response.setStatus(savedRequest.getStatus());
-        response.setRequestedAt(savedRequest.getRequestedAt());
 
         return response;
     }
 
     @Transactional
-    public LeaveGroupResponse leaveGroup(String groupId) {
+    public String leaveGroup(String groupId) {
         // Lấy userId từ SecurityContext
         String currentUserId = SecurityUtil.getCurrentUserLogin()
                 .orElseThrow(() -> new RuntimeException("User not authenticated"));
@@ -253,61 +237,38 @@ public class GroupService {
         GroupMember member = groupMemberRepository.findByGroupIdAndUserId(groupId, currentUserId)
                 .orElseThrow(() -> new RuntimeException("You are not a member of this group"));
 
+        // Xóa tất cả join requests của user này cho group này (cleanup)
+        List<GroupJoinRequest> userRequests = groupJoinRequestRepository
+                .findAllByGroupIdAndUserId(groupId, currentUserId);
+        if (!userRequests.isEmpty()) {
+            groupJoinRequestRepository.deleteAll(userRequests);
+        }
+
         // Xóa membership
         groupMemberRepository.delete(member);
 
-        // Tạo response
-        LeaveGroupResponse response = new LeaveGroupResponse();
-        response.setGroupId(group.getId());
-        response.setGroupName(group.getName());
-        response.setUserId(currentUserId);
-        response.setLeftAt(Instant.now());
-
-        return response;
+        return "Successfully left the group";
     }
 
     @Transactional
-    public CancelJoinRequestResponse cancelJoinRequest(String requestId) {
+    public String cancelJoinRequest(String groupId) {
         // Lấy userId từ SecurityContext
         String currentUserId = SecurityUtil.getCurrentUserLogin()
                 .orElseThrow(() -> new RuntimeException("User not authenticated"));
 
-        // Tìm join request
-        GroupJoinRequest joinRequest = groupJoinRequestRepository.findById(requestId)
-                .orElseThrow(() -> new RuntimeException("Join request not found"));
+        // Tìm pending request của user cho group này
+        GroupJoinRequest joinRequest = groupJoinRequestRepository
+                .findByGroupIdAndUserIdAndStatus(groupId, currentUserId, JoinRequestStatus.PENDING)
+                .orElseThrow(() -> new RuntimeException("No pending join request found for this group"));
 
-        // Kiểm tra người dùng có phải là người gửi request không
-        if (!joinRequest.getUserId().equals(currentUserId)) {
-            throw new RuntimeException("You can only cancel your own join request");
-        }
-
-        // Kiểm tra trạng thái request phải là PENDING
-        if (joinRequest.getStatus() != JoinRequestStatus.PENDING) {
-            throw new RuntimeException("Only pending requests can be cancelled");
-        }
-
-        // Lưu thông tin group trước khi xóa
-        Group group = joinRequest.getGroup();
-        String groupId = group.getId();
-        String groupName = group.getName();
-        Instant cancelledAt = Instant.now();
-
-        // Xóa request
+        // Xóa join request
         groupJoinRequestRepository.delete(joinRequest);
 
-        // Tạo response
-        CancelJoinRequestResponse response = new CancelJoinRequestResponse();
-        response.setRequestId(requestId);
-        response.setGroupId(groupId);
-        response.setGroupName(groupName);
-        response.setUserId(currentUserId);
-        response.setCancelledAt(cancelledAt);
-
-        return response;
+        return "Join request cancelled successfully";
     }
 
     @Transactional
-    public HandleJoinRequestResponse handleJoinRequest(String requestId, Boolean approved) {
+    public RequestResponse handleJoinRequest(String requestId, Boolean approved) {
         // Lấy userId từ SecurityContext
         String currentUserId = SecurityUtil.getCurrentUserLogin()
                 .orElseThrow(() -> new RuntimeException("User not authenticated"));
@@ -336,9 +297,6 @@ public class GroupService {
         }
 
         // Xử lý request
-        Instant handledAt = Instant.now();
-        joinRequest.setHandledAt(handledAt);
-
         if (approved) {
             // Approve - thêm vào group members
             joinRequest.setStatus(JoinRequestStatus.APPROVED);
@@ -358,18 +316,16 @@ public class GroupService {
         groupJoinRequestRepository.save(joinRequest);
 
         // Tạo response
-        HandleJoinRequestResponse response = new HandleJoinRequestResponse();
-        response.setRequestId(joinRequest.getId());
-        response.setGroupId(group.getId());
-        response.setUserId(String.valueOf(joinRequest.getUserId()));
+        RequestResponse response = new RequestResponse();
+        response.setId(joinRequest.getId());
+        response.setUser(buildUserResponse(joinRequest.getUserId()));
+        response.setGroup(buildGroupResponse(group));
         response.setStatus(joinRequest.getStatus());
-        response.setHandledAt(handledAt);
-
         return response;
     }
 
     @Transactional(readOnly = true)
-    public List<GroupMemberResponse> getGroupMembers(String groupId) {
+    public List<MemberResponse> getGroupMembers(String groupId) {
         // Lấy userId từ SecurityContext
         String currentUserId = SecurityUtil.getCurrentUserLogin()
                 .orElseThrow(() -> new RuntimeException("User not authenticated"));
@@ -392,18 +348,16 @@ public class GroupService {
         // Convert sang response DTO
         return members.stream()
                 .map(member -> {
-                    GroupMemberResponse response = new GroupMemberResponse();
-                    response.setUserId(String.valueOf(member.getUserId()));
-                    response.setGroupId(groupId);
+                    MemberResponse response = new MemberResponse();
+                    response.setUser(buildUserResponse(member.getUserId()));
                     response.setRole(member.getRole());
-                    response.setJoinedAt(member.getJoinedAt());
                     return response;
                 })
                 .toList();
     }
 
     @Transactional
-    public GroupMemberResponse updateMemberRole(String groupId, String memberId, GroupRole newRole) {
+    public MemberResponse updateMemberRole(String groupId, String memberId, GroupRole newRole) {
         // Lấy userId từ SecurityContext
         String currentUserId = SecurityUtil.getCurrentUserLogin()
                 .orElseThrow(() -> new RuntimeException("User not authenticated"));
@@ -462,17 +416,15 @@ public class GroupService {
         targetMember.setRole(newRole);
         GroupMember updatedMember = groupMemberRepository.save(targetMember);
 
-        GroupMemberResponse response = new GroupMemberResponse();
-        response.setUserId(String.valueOf(updatedMember.getUserId()));
-        response.setGroupId(groupId);
+        MemberResponse response = new MemberResponse();
+        response.setUser(buildUserResponse(updatedMember.getUserId()));
         response.setRole(updatedMember.getRole());
-        response.setJoinedAt(updatedMember.getJoinedAt());
 
         return response;
     }
 
     @Transactional(readOnly = true)
-    public List<JoinGroupResponse> getGroupJoinRequests(String groupId) {
+    public List<RequestResponse> getGroupJoinRequests(String groupId) {
         // Lấy userId từ SecurityContext
         String currentUserId = SecurityUtil.getCurrentUserLogin()
                 .orElseThrow(() -> new RuntimeException("User not authenticated"));
@@ -496,19 +448,19 @@ public class GroupService {
 
         // Convert sang response DTO
         return requests.stream()
-                .map(req -> new JoinGroupResponse(
-                        req.getId(),
-                        group.getId(),
-                        group.getName(),
-                        String.valueOf(req.getUserId()),
-                        req.getStatus(),
-                        req.getRequestedAt()
-                ))
+                .map(req -> {
+                    RequestResponse response = new RequestResponse();
+                    response.setId(req.getId());
+                    response.setUser(buildUserResponse(req.getUserId()));
+                    response.setGroup(buildGroupResponse(group));
+                    response.setStatus(req.getStatus());
+                    return response;
+                })
                 .toList();
     }
 
     @Transactional(readOnly = true)
-    public List<JoinGroupResponse> getMyPendingRequests() {
+    public List<RequestResponse> getMyPendingRequests() {
         // Lấy userId từ SecurityContext
         String currentUserId = SecurityUtil.getCurrentUserLogin()
                 .orElseThrow(() -> new RuntimeException("User not authenticated"));
@@ -521,27 +473,21 @@ public class GroupService {
         return requests.stream()
                 .map(req -> {
                     Group group = req.getGroup();
-                    return new JoinGroupResponse(
-                            req.getId(),
-                            group.getId(),
-                            group.getName(),
-                            currentUserId,
-                            req.getStatus(),
-                            req.getRequestedAt()
-                    );
+                    RequestResponse response = new RequestResponse();
+                    response.setId(req.getId());
+                    response.setUser(buildUserResponse(currentUserId));
+                    response.setGroup(buildGroupResponse(group));
+                    response.setStatus(req.getStatus());
+                    return response;
                 })
                 .toList();
     }
     
     @Transactional
-    public RemoveMemberResponse removeMember(String groupId, String memberId) {
+    public String removeMember(String groupId, String memberId) {
         // Lấy userId từ SecurityContext
         String currentUserId = SecurityUtil.getCurrentUserLogin()
                 .orElseThrow(() -> new RuntimeException("User not authenticated"));
-
-        // Tìm group theo ID
-        Group group = groupRepository.findById(groupId)
-                .orElseThrow(() -> new RuntimeException("Group not found"));
 
         // Tìm member thực hiện hành động (actor)
         GroupMember actor = groupMemberRepository.findByGroupIdAndUserId(groupId, currentUserId)
@@ -574,19 +520,17 @@ public class GroupService {
             // Admin can only remove Members
         }
 
-        String removedUserId = String.valueOf(targetMember.getUserId());
-
+        // Xóa tất cả join requests của member này cho group này (nếu có)
+        List<GroupJoinRequest> pendingRequests = groupJoinRequestRepository
+                .findAllByGroupIdAndUserId(groupId, memberId);
+        if (!pendingRequests.isEmpty()) {
+            groupJoinRequestRepository.deleteAll(pendingRequests);
+        }
+        
         // Xóa member
         groupMemberRepository.delete(targetMember);
 
-        // Tạo response
-        RemoveMemberResponse response = new RemoveMemberResponse();
-        response.setGroupId(group.getId());
-        response.setGroupName(group.getName());
-        response.setUserId(removedUserId);
-        response.setRemovedAt(Instant.now());
-
-        return response;
+        return "Member removed successfully";
     }
 
     @Transactional
@@ -614,7 +558,7 @@ public class GroupService {
     }
 
     @Transactional
-    public UpdateGroupResponse updateGroup(UpdateGroupRequest request, MultipartFile background, MultipartFile avatar) {
+    public GroupResponse updateGroup(UpdateGroupRequest request, MultipartFile background, MultipartFile avatar) {
         // Lấy userId từ SecurityContext
         String currentUserId = SecurityUtil.getCurrentUserLogin()
                 .orElseThrow(() -> new RuntimeException("User not authenticated"));
@@ -648,12 +592,11 @@ public class GroupService {
         // Lưu thay đổi vào database
         Group updatedGroup = groupRepository.save(group);
 
-        // Convert sang response DTO sử dụng ModelMapper
-        return groupConverter.toUpdateGroupResponse(updatedGroup);
+        return groupConverter.toGroupResponse(updatedGroup);
     }
     
     @Transactional(readOnly = true)
-    public List<GroupMemberResponse> getGroupMembersInternal(String groupId) {
+    public List<MemberResponse> getGroupMembersInternal(String groupId) {
         // Method này dùng cho internal call từ các service khác
         // Không cần kiểm tra authentication
         // Lấy danh sách thành viên
@@ -662,60 +605,20 @@ public class GroupService {
         // Convert sang response DTO
         return members.stream()
                 .map(member -> {
-                    GroupMemberResponse response = new GroupMemberResponse();
-                    response.setUserId(String.valueOf(member.getUserId()));
-                    response.setGroupId(groupId);
+                    MemberResponse response = new MemberResponse();
+                    response.setUser(buildUserResponse(member.getUserId()));
                     response.setRole(member.getRole());
-                    response.setJoinedAt(member.getJoinedAt());
                     return response;
                 })
                 .toList();
     }
 
     @Transactional(readOnly = true)
-    public List<GroupDetailResponse> getJoinedGroups(String targetUserId) {
-        String currentUserId = SecurityUtil.getCurrentUserLogin().orElse(null);
-
+    public List<GroupResponse> getJoinedGroups(String targetUserId) {
         List<GroupMember> targetMemberships = groupMemberRepository.findAllByUserId(targetUserId);
-
-        Map<String, GroupRole> currentUserRoles = new HashMap<>();
-        Map<String, JoinRequestStatus> currentUserRequests = new HashMap<>();
-
-        if (currentUserId != null) {
-            groupMemberRepository.findAllByUserId(currentUserId)
-                    .forEach(m -> currentUserRoles.put(m.getGroup().getId(), m.getRole()));
-
-            groupJoinRequestRepository.findAllByUserIdAndStatus(currentUserId, JoinRequestStatus.PENDING)
-                    .forEach(r -> currentUserRequests.put(r.getGroup().getId(), r.getStatus()));
-        }
-
-        return targetMemberships.stream().map(member -> {
-            Group group = member.getGroup();
-
-            GroupDetailResponse response = groupConverter.toGroupDetailResponse(group);
-
-            response.setAvatarUrl(group.getAvatarUrl());
-            response.setBackgroundUrl(group.getBackgroundUrl());
-            response.setPrivacy(group.getPrivacy());
-
-            Integer memberCount = groupMemberRepository.countMembersByGroupId(group.getId());
-            response.setMemberCount(memberCount != null ? memberCount : 0);
-
-            if (currentUserId != null) {
-                if (currentUserRoles.containsKey(group.getId())) {
-                    response.setRole(currentUserRoles.get(group.getId()));
-                    response.setJoinStatus(null);
-                } else {
-                    response.setRole(null);
-                    response.setJoinStatus(currentUserRequests.get(group.getId()));
-                }
-            } else {
-                response.setRole(null);
-                response.setJoinStatus(null);
-            }
-
-            return response;
-        }).toList();
+        return targetMemberships.stream()
+                .map(member -> buildGroupResponse(member.getGroup()))
+                .toList();
     }
     
     @Transactional(readOnly = true)

@@ -1,20 +1,16 @@
 package com.socialapp.groupservice.dto.response;
 
+import com.socialapp.groupservice.util.constant.GroupRole;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
-import java.time.Instant;
-
 @Getter
 @Setter
 @AllArgsConstructor
 @NoArgsConstructor
-public class RemoveMemberResponse {
-    private String groupId;
-    private String groupName;
-    private String userId;
-    private Instant removedAt;
+public class MemberResponse {
+    private UserResponse user;
+    private GroupRole role;
 }
-

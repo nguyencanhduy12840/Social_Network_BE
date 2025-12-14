@@ -1,9 +1,9 @@
 package com.socialapp.groupservice.mapper;
 
-import com.socialapp.groupservice.dto.response.CreateGroupResponse;
 import com.socialapp.groupservice.dto.response.GroupDetailResponse;
-import com.socialapp.groupservice.dto.response.UpdateGroupResponse;
+import com.socialapp.groupservice.dto.response.GroupResponse;
 import com.socialapp.groupservice.entity.Group;
+import com.socialapp.groupservice.repository.GroupMemberRepository;
 import org.modelmapper.ModelMapper;
 import org.springframework.stereotype.Component;
 
@@ -11,20 +11,26 @@ import org.springframework.stereotype.Component;
 public class GroupConverter {
 
     private final ModelMapper modelMapper;
+    private final GroupMemberRepository groupMemberRepository;
 
-    public GroupConverter(ModelMapper modelMapper) {
+    public GroupConverter(ModelMapper modelMapper, GroupMemberRepository groupMemberRepository) {
         this.modelMapper = modelMapper;
+        this.groupMemberRepository = groupMemberRepository;
     }
 
-    public CreateGroupResponse toCreateGroupResponse(Group group) {
-        return modelMapper.map(group, CreateGroupResponse.class);
+    public GroupResponse toGroupResponse(Group group) {
+        Integer memberCount = groupMemberRepository.countMembersByGroupId(group.getId());
+        return new GroupResponse(
+            group.getId(),
+            group.getName(),
+            group.getDescription(),
+            group.getAvatarUrl(),
+            memberCount != null ? memberCount : 0,
+            group.getPrivacy()
+        );
     }
 
     public GroupDetailResponse toGroupDetailResponse(Group group) {
         return modelMapper.map(group, GroupDetailResponse.class);
-    }
-
-    public UpdateGroupResponse toUpdateGroupResponse(Group group) {
-        return modelMapper.map(group, UpdateGroupResponse.class);
     }
 }

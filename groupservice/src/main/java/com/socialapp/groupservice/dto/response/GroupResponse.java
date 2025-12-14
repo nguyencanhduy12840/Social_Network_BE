@@ -1,25 +1,20 @@
 package com.socialapp.groupservice.dto.response;
 
+import com.socialapp.groupservice.util.constant.GroupPrivacy;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
-import java.time.Instant;
-
-import com.socialapp.groupservice.util.constant.GroupPrivacy;
-
 @Getter
 @Setter
 @AllArgsConstructor
 @NoArgsConstructor
-public class CreateGroupResponse {
+public class GroupResponse {
     private String id;
     private String name;
-    private String ownerId;
     private String description;
     private String avatarUrl;
-    private String backgroundUrl;
+    private Integer memberCount;
     private GroupPrivacy privacy;
-    private Instant createdAt;
 }
