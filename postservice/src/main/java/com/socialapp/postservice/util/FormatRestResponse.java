@@ -36,7 +36,7 @@ public class FormatRestResponse implements ResponseBodyAdvice<Object> {
             return body;
         }
 
-        if (path.startsWith("/auth/validate")) {
+        if (path.startsWith("/auth/validate") || path.startsWith("/post/internal")) {
             return body;
         }
 

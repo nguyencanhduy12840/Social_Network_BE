@@ -22,6 +22,7 @@ public class UserProfileResponse {
     String bio;
     String gender;
     LocalDate dob;
+    Integer postCount;
     Integer groupCount;
     Integer friendCount;
     String friendStatus;

@@ -7,6 +7,7 @@ import com.socialapp.profileservice.entity.UserProfile;
 import com.socialapp.profileservice.mapper.UserProfileConverter;
 import com.socialapp.profileservice.repository.UserProfileRepository;
 import com.socialapp.profileservice.repository.httpclient.GroupClient;
+import com.socialapp.profileservice.repository.httpclient.PostClient;
 import com.socialapp.profileservice.util.FriendshipStatus;
 import com.socialapp.profileservice.util.SecurityUtil;
 
@@ -24,14 +25,16 @@ public class UserProfileService {
     private final UserProfileConverter userProfileMapper;
     private final FriendshipService friendshipService;
     private final GroupClient groupClient;
+    private final PostClient postClient;
     private final CloudinaryService cloudinaryService;
 
-    public UserProfileService(UserProfileRepository userProfileRepository, UserProfileConverter userProfileMapper, FriendshipService friendshipService, CloudinaryService cloudinaryService, GroupClient groupClient) {
+    public UserProfileService(UserProfileRepository userProfileRepository, UserProfileConverter userProfileMapper, FriendshipService friendshipService, CloudinaryService cloudinaryService, GroupClient groupClient, PostClient postClient) {
         this.userProfileRepository = userProfileRepository;
         this.userProfileMapper = userProfileMapper;
         this.friendshipService = friendshipService;
         this.cloudinaryService = cloudinaryService;
         this.groupClient = groupClient;
+        this.postClient = postClient;
     }
 
     public UserProfileResponse createProfile(ProfileCreationRequest request) {
@@ -69,6 +72,17 @@ public class UserProfileService {
         } catch (Exception e) {
             log.error("Error fetching group count for user: " + id, e);
             userProfileResponse.setGroupCount(0);
+        }
+
+        try {
+            String userId = userProfile.getUserId();
+            log.info("Fetching post count for userId: {}", userId);
+            Integer postCount = postClient.getPostCount(userId);
+            log.info("Post count for userId {}: {}", userId, postCount);
+            userProfileResponse.setPostCount(postCount != null ? postCount : 0);
+        } catch (Exception e) {
+            log.error("Error fetching post count for user: " + id, e);
+            userProfileResponse.setPostCount(0);
         }
 
 

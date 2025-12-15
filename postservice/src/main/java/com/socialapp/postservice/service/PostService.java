@@ -13,6 +13,7 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
 import com.socialapp.postservice.dto.request.BaseEvent;
@@ -399,8 +400,7 @@ public class PostService {
 
         Pageable pageable = PageRequest.of(page, size,
                 org.springframework.data.domain.Sort.by(
-                        org.springframework.data.domain.Sort.Direction.DESC, "createdAt"
-                ));
+                        org.springframework.data.domain.Sort.Direction.DESC, "createdAt"));
 
         Page<Post> postsPage;
 
@@ -439,5 +439,10 @@ public class PostService {
                 .hasNext(postsPage.hasNext())
                 .hasPrevious(postsPage.hasPrevious())
                 .build();
+    }
+
+    @Transactional(readOnly = true)
+    public int countPostsByUserId(String userId) {
+        return postRepository.countByAuthorId(userId);
     }
 }
