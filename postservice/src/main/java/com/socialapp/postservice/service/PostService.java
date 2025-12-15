@@ -392,4 +392,52 @@ public class PostService {
                 .hasPrevious(postsPage.hasPrevious())
                 .build();
     }
+
+    public PagedPostResponse getUserPosts(String userId, int page, int size) {
+        String currentUserId = SecurityUtil.getCurrentUserLogin()
+                .orElseThrow(() -> new RuntimeException("User not authenticated"));
+
+        Pageable pageable = PageRequest.of(page, size,
+                org.springframework.data.domain.Sort.by(
+                        org.springframework.data.domain.Sort.Direction.DESC, "createdAt"
+                ));
+
+        Page<Post> postsPage;
+
+        // If requesting own posts, return all posts
+        if (currentUserId.equals(userId)) {
+            postsPage = postRepository.findByAuthorIdOrderByCreatedAtDesc(userId, pageable);
+        } else {
+            // Check if users are friends
+            Boolean isFriend = profileClient.isFriend(currentUserId, userId).getData();
+            if (Boolean.TRUE.equals(isFriend)) {
+                // Return PUBLIC and FRIENDS posts
+                postsPage = postRepository.findByAuthorIdAndPrivacyInOrderByCreatedAtDesc(
+                        userId, List.of("PUBLIC", "FRIENDS"), pageable);
+            } else {
+                // Return only PUBLIC posts
+                postsPage = postRepository.findByAuthorIdAndPrivacyInOrderByCreatedAtDesc(
+                        userId, List.of("PUBLIC"), pageable);
+            }
+        }
+
+        // Convert posts to response
+        List<PostResponse> postResponses = new ArrayList<>();
+        for (Post post : postsPage.getContent()) {
+            PostResponse postResponse = postConverter.convertToPostResponse(post);
+            OneUserProfileResponse authorProfile = profileClient.getUserProfile(post.getAuthorId());
+            postResponse.setAuthorProfile(authorProfile.getData());
+            postResponses.add(postResponse);
+        }
+
+        return PagedPostResponse.builder()
+                .posts(postResponses)
+                .currentPage(postsPage.getNumber())
+                .totalPages(postsPage.getTotalPages())
+                .totalElements(postsPage.getTotalElements())
+                .pageSize(postsPage.getSize())
+                .hasNext(postsPage.hasNext())
+                .hasPrevious(postsPage.hasPrevious())
+                .build();
+    }
 }

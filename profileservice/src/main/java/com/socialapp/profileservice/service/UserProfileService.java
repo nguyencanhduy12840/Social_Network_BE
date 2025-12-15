@@ -7,7 +7,6 @@ import com.socialapp.profileservice.entity.UserProfile;
 import com.socialapp.profileservice.mapper.UserProfileConverter;
 import com.socialapp.profileservice.repository.UserProfileRepository;
 import com.socialapp.profileservice.repository.httpclient.GroupClient;
-import com.socialapp.profileservice.repository.httpclient.PostClient;
 import com.socialapp.profileservice.util.FriendshipStatus;
 import com.socialapp.profileservice.util.SecurityUtil;
 
@@ -24,15 +23,13 @@ public class UserProfileService {
     private final UserProfileRepository userProfileRepository;
     private final UserProfileConverter userProfileMapper;
     private final FriendshipService friendshipService;
-    private final PostClient postClient;
     private final GroupClient groupClient;
     private final CloudinaryService cloudinaryService;
 
-    public UserProfileService(UserProfileRepository userProfileRepository, UserProfileConverter userProfileMapper, FriendshipService friendshipService, PostClient postClient, CloudinaryService cloudinaryService, GroupClient groupClient) {
+    public UserProfileService(UserProfileRepository userProfileRepository, UserProfileConverter userProfileMapper, FriendshipService friendshipService, CloudinaryService cloudinaryService, GroupClient groupClient) {
         this.userProfileRepository = userProfileRepository;
         this.userProfileMapper = userProfileMapper;
         this.friendshipService = friendshipService;
-        this.postClient = postClient;
         this.cloudinaryService = cloudinaryService;
         this.groupClient = groupClient;
     }
@@ -62,8 +59,6 @@ public class UserProfileService {
             userProfileResponse.setFriendStatus(friendshipStatus);
         }
 
-
-        userProfileResponse.setPosts(postClient.getPosts(id).getData());
         userProfileResponse.setFriendCount((int) friendshipService.getFriendCount(id));
         try {
             String userId = userProfile.getUserId();

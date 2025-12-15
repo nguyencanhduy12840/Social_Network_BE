@@ -47,26 +47,35 @@ public class PostController {
         return ResponseEntity.ok(updatedPost);
     }
 
-     @GetMapping("/get-post")
-     public ResponseEntity<PagedPostResponse> getPostDisplay(
-             @RequestParam(defaultValue = "0") int page,
-             @RequestParam(defaultValue = "10") int size,
-             @RequestParam String type){
+    @GetMapping("/get-post")
+    public ResponseEntity<PagedPostResponse> getPostDisplay(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size,
+            @RequestParam String type){
         PagedPostResponse pagedResponse = postService.getPostOnMainScreen(page, size, type);
         return ResponseEntity.ok().body(pagedResponse);
-     }
+    }
 
-     @GetMapping("/group/{groupId}")
-     public ResponseEntity<PagedPostResponse> getGroupPosts(
-             @PathVariable String groupId,
-             @RequestParam(defaultValue = "0") int page,
-             @RequestParam(defaultValue = "10") int size) {
-         PagedPostResponse pagedResponse = postService.getGroupPosts(groupId, page, size);
-         return ResponseEntity.ok(pagedResponse);
-     }
+    @GetMapping("/group/{groupId}")
+    public ResponseEntity<PagedPostResponse> getGroupPosts(
+            @PathVariable String groupId,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size) {
+        PagedPostResponse pagedResponse = postService.getGroupPosts(groupId, page, size);
+        return ResponseEntity.ok(pagedResponse);
+    }
 
-     @PutMapping("/update-post")
-     public ResponseEntity<Post> updatePost(@RequestParam("postId") String postId,
+    @GetMapping("/profile/{userId}")
+    public ResponseEntity<PagedPostResponse> getUserPosts(
+            @PathVariable String userId,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size) {
+        PagedPostResponse pagedResponse = postService.getUserPosts(userId, page, size);
+        return ResponseEntity.ok(pagedResponse);
+    }
+
+    @PutMapping("/update-post")
+    public ResponseEntity<Post> updatePost(@RequestParam("postId") String postId,
                                             @RequestParam(required = false) String content,
                                             @RequestParam("privacy") String privacy,
                                             @RequestPart(value = "media", required = false) MultipartFile[] mediaFiles) {
@@ -75,36 +84,36 @@ public class PostController {
             throw new NotFoundException("Post not found");
         }
         return ResponseEntity.ok(updatedPost);
-     }
+    }
 
-     @DeleteMapping("/delete-post/{postId}")
-     public ResponseEntity<String> deletePost(@PathVariable String postId) {
+    @DeleteMapping("/delete-post/{postId}")
+    public ResponseEntity<String> deletePost(@PathVariable String postId) {
         boolean isDeleted = postService.deletePost(postId);
         if (!isDeleted) {
             throw new NotFoundException("Post not found");
         }
         return ResponseEntity.ok("Post deleted successfully");
-     }
+    }
 
-     @PostMapping("/unlike-post")
-     public ResponseEntity<Post> unlikePost(@RequestBody LikePostRequest unlikePostRequest) {
+    @PostMapping("/unlike-post")
+    public ResponseEntity<Post> unlikePost(@RequestBody LikePostRequest unlikePostRequest) {
         Post updatedPost = postService.unlikePost(unlikePostRequest);
         if (updatedPost == null) {
             throw new NotFoundException("Post not found");
         }
         return ResponseEntity.ok(updatedPost);
-     }
+    }
 
-     @GetMapping("/{postId}")
-     public ResponseEntity<PostResponse> getPostById(@PathVariable String postId) {
+    @GetMapping("/{postId}")
+    public ResponseEntity<PostResponse> getPostById(@PathVariable String postId) {
         PostResponse post = postService.getPostById(postId);
         if (post == null) {
             throw new NotFoundException("Post not found");
         }
         return ResponseEntity.ok(post);
-     }
+    }
 
-     @GetMapping("/userlikes/{postId}")
+    @GetMapping("/userlikes/{postId}")
     public ResponseEntity<List<OneUserProfileResponse.UserProfileOne>> getUsersWhoLikedPost(@PathVariable String postId) {
         List<OneUserProfileResponse.UserProfileOne> users = postService.getUserLikePost(postId);
         if (users == null) {
@@ -120,7 +129,8 @@ public class PostController {
     }
 
     @GetMapping("/seen/{postId}")
-    public ResponseEntity<List<OneUserProfileResponse.UserProfileOne>> getUsersWhoSeenPost(@PathVariable String postId) {
+    public ResponseEntity<List<OneUserProfileResponse.UserProfileOne>> getUsersWhoSeenPost(
+            @PathVariable String postId) {
         List<OneUserProfileResponse.UserProfileOne> users = postService.getUsersWhoSeenPost(postId);
         if (users == null) {
             throw new NotFoundException("Post not found");
