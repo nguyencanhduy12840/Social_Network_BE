@@ -49,6 +49,7 @@ public class SecurityConfig {
                 "/userlikes/**",
                 "/seen",
                 "/seen/**",
+                "/profile/**",
                 "/group/**"
         };
         http
