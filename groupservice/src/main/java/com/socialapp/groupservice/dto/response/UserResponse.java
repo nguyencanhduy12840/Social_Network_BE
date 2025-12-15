@@ -10,7 +10,7 @@ import lombok.Setter;
 @AllArgsConstructor
 @NoArgsConstructor
 public class UserResponse {
-    private String userId;
+    private String id;
     private String username;
     private String avatarUrl;
 }
