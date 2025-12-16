@@ -394,7 +394,7 @@ public class PostService {
                 .build();
     }
 
-    public PagedPostResponse getUserPosts(String userId, int page, int size) {
+    public PagedPostResponse getUserPosts(String userId, int page, int size, String type) {
         String currentUserId = SecurityUtil.getCurrentUserLogin()
                 .orElseThrow(() -> new RuntimeException("User not authenticated"));
 
@@ -406,18 +406,18 @@ public class PostService {
 
         // If requesting own posts, return all posts
         if (currentUserId.equals(userId)) {
-            postsPage = postRepository.findByAuthorIdOrderByCreatedAtDesc(userId, pageable);
+            postsPage = postRepository.findByAuthorIdAndTypeOrderByCreatedAtDesc(userId, type, pageable);
         } else {
             // Check if users are friends
             Boolean isFriend = profileClient.isFriend(currentUserId, userId).getData();
             if (Boolean.TRUE.equals(isFriend)) {
                 // Return PUBLIC and FRIENDS posts
-                postsPage = postRepository.findByAuthorIdAndPrivacyInOrderByCreatedAtDesc(
-                        userId, List.of("PUBLIC", "FRIENDS"), pageable);
+                postsPage = postRepository.findByAuthorIdAndTypeAndPrivacyInOrderByCreatedAtDesc(
+                        userId, type, List.of("PUBLIC", "FRIENDS"), pageable);
             } else {
                 // Return only PUBLIC posts
-                postsPage = postRepository.findByAuthorIdAndPrivacyInOrderByCreatedAtDesc(
-                        userId, List.of("PUBLIC"), pageable);
+                postsPage = postRepository.findByAuthorIdAndTypeAndPrivacyInOrderByCreatedAtDesc(
+                        userId, type, List.of("PUBLIC"), pageable);
             }
         }
 

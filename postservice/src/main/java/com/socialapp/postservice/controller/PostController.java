@@ -69,8 +69,9 @@ public class PostController {
     public ResponseEntity<PagedPostResponse> getUserPosts(
             @PathVariable String userId,
             @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "10") int size) {
-        PagedPostResponse pagedResponse = postService.getUserPosts(userId, page, size);
+            @RequestParam(defaultValue = "10") int size,
+            @RequestParam(defaultValue = "POST") String type) {
+        PagedPostResponse pagedResponse = postService.getUserPosts(userId, page, size, type);
         return ResponseEntity.ok(pagedResponse);
     }
 
