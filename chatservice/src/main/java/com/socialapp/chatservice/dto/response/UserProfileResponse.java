@@ -13,4 +13,3 @@ public class UserProfileResponse {
     private String avatarUrl;
     private String email;
 }
-

@@ -26,6 +26,13 @@ public class KafkaConsumerService {
 
             ChatMessageEvent event = objectMapper.readValue(message, ChatMessageEvent.class);
 
+            if (event.getEventType() == ChatMessageEvent.EventType.TYPING) {
+                if (event.getRecipientId() != null) {
+                    webSocketService.sendTypingEvent(event.getRecipientId(), event);
+                }
+                return; // Done
+            }
+
             // Push tin nhắn tới người nhận qua WebSocket
             if (event.getRecipientId() != null) {
                 webSocketService.sendMessageToUser(event.getRecipientId(), event);

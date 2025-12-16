@@ -3,7 +3,6 @@ package com.socialapp.chatservice.websocket;
 import com.socialapp.chatservice.dto.request.SendMessageRequest;
 import com.socialapp.chatservice.dto.response.MessageResponse;
 import com.socialapp.chatservice.service.ChatService;
-import com.socialapp.chatservice.util.SecurityUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.messaging.handler.annotation.MessageMapping;
@@ -19,6 +18,7 @@ import java.security.Principal;
 public class WebSocketController {
 
     private final ChatService chatService;
+    private final com.socialapp.chatservice.kafka.KafkaProducerService kafkaProducerService;
 
     /**
      * Client gửi tin nhắn qua WebSocket
@@ -51,23 +51,33 @@ public class WebSocketController {
      */
     @MessageMapping("/chat.typing")
     public void userTyping(
-            @Payload TypingEvent event,
+            @Payload com.socialapp.chatservice.dto.request.TypingRequest request,
             Principal principal) {
         try {
             String currentUserId = principal.getName();
-            log.info("User {} is typing in chat {}", currentUserId, event.getChatId());
+            // log.info("User {} is typing in chat {}", currentUserId, request.getChatId());
 
-            // Có thể broadcast typing indicator tới người khác trong conversation
+            // Tìm người nhận
+            String recipientId = chatService.getOtherParticipantId(request.getChatId(), currentUserId);
+            if (recipientId == null) {
+                return;
+            }
+
+            // Tạo event
+            com.socialapp.chatservice.dto.event.ChatMessageEvent event = com.socialapp.chatservice.dto.event.ChatMessageEvent.builder()
+                    .chatId(request.getChatId())
+                    .senderId(currentUserId)
+                    .recipientId(recipientId)
+                    .content(request.isTyping() ? "TYPING_START" : "TYPING_STOP") // Dùng content để đánh dấu
+                    .eventType(com.socialapp.chatservice.dto.event.ChatMessageEvent.EventType.TYPING)
+                    .build();
+
+            // Gửi qua Kafka -> Consumer -> WebSocket -> Client
+            kafkaProducerService.sendChatMessage(event);
 
         } catch (Exception e) {
             log.error("Error processing typing event: {}", e.getMessage(), e);
         }
-    }
-
-    @lombok.Data
-    public static class TypingEvent {
-        private String chatId;
-        private boolean isTyping;
     }
 }
 

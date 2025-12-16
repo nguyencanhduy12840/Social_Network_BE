@@ -62,5 +62,20 @@ public class WebSocketService {
             log.error("Error broadcasting message: {}", e.getMessage(), e);
         }
     }
+
+    /**
+     * Gửi event typing tới user
+     */
+    public void sendTypingEvent(String userId, Object event) {
+        try {
+            messagingTemplate.convertAndSendToUser(
+                    userId,
+                    "/queue/typing",
+                    event
+            );
+        } catch (Exception e) {
+            log.error("Error sending typing event to user {}: {}", userId, e.getMessage());
+        }
+    }
 }
 

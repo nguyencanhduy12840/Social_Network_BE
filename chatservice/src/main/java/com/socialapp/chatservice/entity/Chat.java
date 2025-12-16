@@ -18,27 +18,29 @@ public class Chat {
     @Id
     private String id;
 
-    private List<String> participants; // Danh sách 2 userId tham gia chat
+    private List<String> participants; 
 
-    private String lastMessageId; // ID tin nhắn cuối cùng
+    private String lastMessageId;   
 
-    private String lastMessage; // Nội dung tin nhắn cuối
+    private String lastMessage; 
 
-    private Instant lastMessageTime; // Thời gian tin nhắn cuối
+    private Instant lastMessageTime; 
 
-    private String lastMessageSenderId; // Người gửi tin nhắn cuối
+    private String lastMessageSenderId;
 
     private Instant createdAt;
 
     private Instant updatedAt;
 
-    // Theo dõi ai đã đọc tin nhắn cuối
-    private List<String> readBy; // Danh sách userId đã đọc
+    private List<String> readBy; 
+
+    private List<String> deletedBy;
 
     public Chat(List<String> participants) {
         this.participants = participants;
         this.createdAt = Instant.now();
         this.updatedAt = Instant.now();
         this.readBy = new ArrayList<>();
+        this.deletedBy = new ArrayList<>();
     }
 }

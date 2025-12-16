@@ -24,15 +24,14 @@ public class ChatMessageEvent implements Serializable {
     private String content;
     private Message.MessageType type;
     private String fileUrl;
-    private String fileName;
     private Instant createdAt;
     private List<String> readBy;
     private EventType eventType;
 
     public enum EventType {
-        NEW_MESSAGE,      // Tin nhắn mới
-        MESSAGE_DELETED,  // Tin nhắn bị xóa
-        MESSAGE_READ      // Tin nhắn đã đọc
+        NEW_MESSAGE, // Tin nhắn mới
+        MESSAGE_DELETED, // Tin nhắn bị xóa
+        MESSAGE_READ, // Tin nhắn đã đọc
+        TYPING // Đang nhập liệu
     }
 }
-

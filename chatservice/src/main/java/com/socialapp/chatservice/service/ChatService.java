@@ -2,7 +2,6 @@ package com.socialapp.chatservice.service;
 
 import com.socialapp.chatservice.client.ProfileClient;
 import com.socialapp.chatservice.dto.request.CreateChatRequest;
-import com.socialapp.chatservice.dto.request.MarkAsReadRequest;
 import com.socialapp.chatservice.dto.request.SendMessageRequest;
 import com.socialapp.chatservice.dto.response.ChatResponse;
 import com.socialapp.chatservice.dto.response.MessageResponse;
@@ -32,6 +31,12 @@ public class ChatService {
     private final MessageRepository messageRepository;
     private final ProfileClient profileClient;
     private final KafkaProducerService kafkaProducerService;
+    private final OnlineUserService onlineUserService;
+    private final CloudinaryService cloudinaryService;
+
+    public boolean isUserOnline(String userId) {
+        return onlineUserService.isUserOnline(userId);
+    }
 
     /**
      * Tạo hoặc lấy conversation giữa 2 người
@@ -61,11 +66,16 @@ public class ChatService {
         return mapToChatResponse(chat, currentUserId);
     }
 
+    @Transactional
+    public MessageResponse sendMessage(String currentUserId, SendMessageRequest request) {
+        return sendMessage(currentUserId, request, null);
+    }
+
     /**
      * Gửi tin nhắn
      */
     @Transactional
-    public MessageResponse sendMessage(String currentUserId, SendMessageRequest request) {
+    public MessageResponse sendMessage(String currentUserId, SendMessageRequest request, org.springframework.web.multipart.MultipartFile file) {
         // Kiểm tra chat có tồn tại không
         Chat chat = chatRepository.findById(request.getChatId())
                 .orElseThrow(() -> new RuntimeException("Chat không tồn tại"));
@@ -75,32 +85,76 @@ public class ChatService {
             throw new RuntimeException("Bạn không có quyền gửi tin nhắn trong chat này");
         }
 
+        String fileUrl = null;
+        Message.MessageType type = Message.MessageType.TEXT;
+
+        // Xử lý file upload
+        if (file != null && !file.isEmpty()) {
+            String contentType = file.getContentType();
+            
+            if (contentType != null) {
+                if (contentType.startsWith("image/")) {
+                    type = Message.MessageType.IMAGE;
+                    fileUrl = cloudinaryService.uploadImage(file);
+                } else if (contentType.startsWith("video/")) {
+                    type = Message.MessageType.VIDEO;
+                    fileUrl = cloudinaryService.uploadVideo(file);
+                } else if (contentType.startsWith("audio/")) {
+                    type = Message.MessageType.AUDIO;
+                    fileUrl = cloudinaryService.uploadVideo(file); 
+                } else {
+                    type = Message.MessageType.FILE;
+                    fileUrl = cloudinaryService.uploadFile(file);
+                }
+            } else {
+                type = Message.MessageType.FILE;
+                fileUrl = cloudinaryService.uploadFile(file);
+            }
+        }
+
         // Tạo tin nhắn mới
         Message message = Message.builder()
                 .chatId(request.getChatId())
                 .senderId(currentUserId)
                 .content(request.getContent())
-                .type(request.getType() != null ? request.getType() : Message.MessageType.TEXT)
-                .fileUrl(request.getFileUrl())
-                .fileName(request.getFileName())
+                .type(type)
+                .fileUrl(fileUrl)
                 .createdAt(Instant.now())
                 .updatedAt(Instant.now())
                 .isDeleted(false)
-                .readBy(new ArrayList<>(Collections.singletonList(currentUserId))) // Người gửi tự động đã đọc
+                .readBy(new ArrayList<>(Collections.singletonList(currentUserId)))
                 .build();
 
         message = messageRepository.save(message);
 
         // Cập nhật thông tin tin nhắn cuối trong chat
         chat.setLastMessageId(message.getId());
-        chat.setLastMessage(message.getContent());
+        String lastMessageContent = message.getContent();
+        if (type == Message.MessageType.IMAGE) lastMessageContent = "Đã gửi một ảnh";
+        else if (type == Message.MessageType.VIDEO) lastMessageContent = "Đã gửi một video";
+        else if (type == Message.MessageType.AUDIO) lastMessageContent = "Đã gửi một ghi âm";
+        else if (type == Message.MessageType.FILE) lastMessageContent = "Đã gửi một file";
+        
+        if (message.getContent() != null && !message.getContent().isEmpty()) {
+             chat.setLastMessage(message.getContent());
+        } else {
+             chat.setLastMessage(lastMessageContent);
+        }
+        
         chat.setLastMessageTime(message.getCreatedAt());
         chat.setLastMessageSenderId(currentUserId);
         chat.setUpdatedAt(Instant.now());
-        chat.setReadBy(new ArrayList<>(Collections.singletonList(currentUserId))); // Reset readBy
+        chat.setReadBy(new ArrayList<>(Collections.singletonList(currentUserId))); 
+        
+        if (chat.getDeletedBy() != null) {
+            chat.getDeletedBy().clear();
+        } else {
+            chat.setDeletedBy(new ArrayList<>());
+        }
+        
         chatRepository.save(chat);
 
-        // === KAFKA: Gửi event tin nhắn mới ===
+        // === KAFKA ===
         sendMessageEventToKafka(message, chat, currentUserId);
 
         return mapToMessageResponse(message, currentUserId);
@@ -119,9 +173,10 @@ public class ChatService {
             throw new RuntimeException("Bạn không có quyền xem tin nhắn trong chat này");
         }
 
-        // Lấy tin nhắn với phân trang, sắp xếp theo thời gian giảm dần
+        // Lấy tin nhắn với phân trang, loại bỏ tin nhắn đã xóa soft và tin nhắn bị ẩn bởi người dùng hiện tại
         Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt"));
-        Page<Message> messages = messageRepository.findByChatIdAndIsDeletedFalse(chatId, pageable);
+        Page<Message> messages = messageRepository.findByChatIdAndIsDeletedFalseAndDeletedByNotContains(
+                chatId, currentUserId, pageable);
 
         return messages.map(message -> mapToMessageResponse(message, currentUserId));
     }
@@ -131,18 +186,22 @@ public class ChatService {
      */
     public Page<ChatResponse> getChats(String currentUserId, int page, int size) {
         Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "updatedAt"));
-        Page<Chat> chats = chatRepository.findByParticipantsContaining(currentUserId, pageable);
+        Page<Chat> chats = chatRepository.findByParticipantsContainingAndDeletedByNotContaining(currentUserId, currentUserId, pageable);
 
         return chats.map(chat -> mapToChatResponse(chat, currentUserId));
+    }
+
+    public long getGlobalUnreadCount(String currentUserId) {
+        return messageRepository.countAllUnreadMessages(currentUserId);
     }
 
     /**
      * Đánh dấu tất cả tin nhắn trong chat là đã đọc
      */
     @Transactional
-    public void markAsRead(String currentUserId, MarkAsReadRequest request) {
+    public void markAsRead(String currentUserId, String chatId) {
         // Kiểm tra chat có tồn tại không
-        Chat chat = chatRepository.findById(request.getChatId())
+        Chat chat = chatRepository.findById(chatId)
                 .orElseThrow(() -> new RuntimeException("Chat không tồn tại"));
 
         // Kiểm tra user có phải là thành viên của chat không
@@ -151,7 +210,7 @@ public class ChatService {
         }
 
         // Lấy tất cả tin nhắn chưa đọc
-        List<Message> unreadMessages = messageRepository.findUnreadMessages(request.getChatId(), currentUserId);
+        List<Message> unreadMessages = messageRepository.findUnreadMessages(chatId, currentUserId);
 
         // Đánh dấu đã đọc
         for (Message message : unreadMessages) {
@@ -184,36 +243,57 @@ public class ChatService {
         Message message = messageRepository.findById(messageId)
                 .orElseThrow(() -> new RuntimeException("Tin nhắn không tồn tại"));
 
-        // Chỉ người gửi mới có thể xóa tin nhắn của mình
-        if (!message.getSenderId().equals(currentUserId)) {
-            throw new RuntimeException("Bạn không có quyền xóa tin nhắn này");
+        // Check if user is in the chat
+        Chat chat = chatRepository.findById(message.getChatId())
+                 .orElseThrow(() -> new RuntimeException("Chat không tồn tại"));
+
+        if (!chat.getParticipants().contains(currentUserId)) {
+            throw new RuntimeException("Bạn không có quyền xóa tin nhắn trong chat này");
         }
 
-        message.setDeleted(true);
-        message.setUpdatedAt(Instant.now());
-        messageRepository.save(message);
+        // Soft delete (chỉ xóa phía mình)
+        if (message.getDeletedBy() == null) {
+            message.setDeletedBy(new ArrayList<>());
+        }
+        if (!message.getDeletedBy().contains(currentUserId)) {
+            message.getDeletedBy().add(currentUserId);
+            message.setUpdatedAt(Instant.now());
+            messageRepository.save(message);
+        }
+    }
 
-        // Cập nhật lastMessage trong chat nếu tin nhắn bị xóa là tin nhắn cuối
-        Chat chat = chatRepository.findById(message.getChatId()).orElse(null);
-        if (chat != null && messageId.equals(chat.getLastMessageId())) {
-            Message lastMessage = messageRepository.findFirstByChatIdAndIsDeletedFalseOrderByCreatedAtDesc(message.getChatId());
-            if (lastMessage != null) {
-                chat.setLastMessageId(lastMessage.getId());
-                chat.setLastMessage(lastMessage.getContent());
-                chat.setLastMessageTime(lastMessage.getCreatedAt());
-                chat.setLastMessageSenderId(lastMessage.getSenderId());
-            } else {
-                chat.setLastMessageId(null);
-                chat.setLastMessage(null);
-                chat.setLastMessageTime(null);
-                chat.setLastMessageSenderId(null);
-            }
-            chat.setUpdatedAt(Instant.now());
+    @Transactional
+    public void deleteChat(String currentUserId, String chatId) {
+        Chat chat = chatRepository.findById(chatId)
+                .orElseThrow(() -> new RuntimeException("Chat không tồn tại"));
+
+        // Kiểm tra permission
+        if (!chat.getParticipants().contains(currentUserId)) {
+            throw new RuntimeException("Bạn không có quyền xóa conversation này");
+        }
+
+        // Create list if null
+        if (chat.getDeletedBy() == null) {
+            chat.setDeletedBy(new ArrayList<>());
+        }
+
+        // Add user to chat deleted list
+        if (!chat.getDeletedBy().contains(currentUserId)) {
+            chat.getDeletedBy().add(currentUserId);
             chatRepository.save(chat);
         }
 
-        // === KAFKA: Gửi event tin nhắn đã xóa ===
-        sendDeleteMessageEventToKafka(message, chat);
+        // Soft delete all messages in chat for this user
+        List<Message> messages = messageRepository.findAllByChatId(chatId);
+        for (Message msg : messages) {
+            if (msg.getDeletedBy() == null) {
+                msg.setDeletedBy(new ArrayList<>());
+            }
+            if (!msg.getDeletedBy().contains(currentUserId)) {
+                msg.getDeletedBy().add(currentUserId);
+            }
+        }
+        messageRepository.saveAll(messages);
     }
 
     /**
@@ -231,6 +311,19 @@ public class ChatService {
         return mapToChatResponse(chat, currentUserId);
     }
 
+    /**
+     * Lấy ID người tham gia còn lại trong chat
+     */
+    public String getOtherParticipantId(String chatId, String currentUserId) {
+        Chat chat = chatRepository.findById(chatId)
+                .orElseThrow(() -> new RuntimeException("Chat không tồn tại"));
+        
+        return chat.getParticipants().stream()
+                .filter(id -> !id.equals(currentUserId))
+                .findFirst()
+                .orElse(null);
+    }
+
     // === Helper Methods ===
 
     private ChatResponse mapToChatResponse(Chat chat, String currentUserId) {
@@ -243,12 +336,14 @@ public class ChatService {
         // Lấy thông tin user từ profile service
         ChatResponse.ParticipantInfo otherParticipant = null;
         if (otherUserId != null) {
+            boolean isOnline = onlineUserService.isUserOnline(otherUserId);
             try {
                 UserProfileResponse profile = profileClient.getUserProfile(otherUserId);
                 otherParticipant = ChatResponse.ParticipantInfo.builder()
                         .userId(profile.getUserId())
                         .fullName(profile.getFullName())
                         .avatarUrl(profile.getAvatarUrl())
+                        .isOnline(isOnline)
                         .build();
             } catch (Exception e) {
                 System.err.println("Error fetching user profile: " + e.getMessage());
@@ -257,19 +352,39 @@ public class ChatService {
                         .userId(otherUserId)
                         .fullName("Unknown User")
                         .avatarUrl(null)
+                        .isOnline(isOnline)
                         .build();
             }
         }
 
-        // Đếm số tin nhắn chưa đọc
+        // Calculate unread count (exclude deleted messages)
         long unreadCount = messageRepository.countUnreadMessages(chat.getId(), currentUserId);
+
+        // Get visible last message for this user
+        Message lastMessage = messageRepository.findFirstByChatIdAndIsDeletedFalseAndDeletedByNotContainingOrderByCreatedAtDesc(chat.getId(), currentUserId);
+        
+        String lastMessageContent = null;
+        Instant lastMessageTime = null;
+        String lastMessageSenderId = null;
+
+        if (lastMessage != null) {
+            lastMessageTime = lastMessage.getCreatedAt();
+            lastMessageSenderId = lastMessage.getSenderId();
+
+            // Format content based on type
+            if (lastMessage.getType() == Message.MessageType.IMAGE) lastMessageContent = "Send an image";
+            else if (lastMessage.getType() == Message.MessageType.VIDEO) lastMessageContent = "Send a video";
+            else if (lastMessage.getType() == Message.MessageType.AUDIO) lastMessageContent = "Send an audio";
+            else if (lastMessage.getType() == Message.MessageType.FILE) lastMessageContent = "Send a file";
+            else lastMessageContent = lastMessage.getContent();
+        }
 
         return ChatResponse.builder()
                 .id(chat.getId())
                 .participants(chat.getParticipants())
-                .lastMessage(chat.getLastMessage())
-                .lastMessageTime(chat.getLastMessageTime())
-                .lastMessageSenderId(chat.getLastMessageSenderId())
+                .lastMessage(lastMessageContent)
+                .lastMessageTime(lastMessageTime)
+                .lastMessageSenderId(lastMessageSenderId)
                 .unreadCount((int) unreadCount)
                 .otherParticipant(otherParticipant)
                 .createdAt(chat.getCreatedAt())
@@ -278,24 +393,6 @@ public class ChatService {
     }
 
     private MessageResponse mapToMessageResponse(Message message, String currentUserId) {
-        // Lấy thông tin người gửi
-        MessageResponse.SenderInfo senderInfo = null;
-        try {
-            UserProfileResponse profile = profileClient.getUserProfile(message.getSenderId());
-            senderInfo = MessageResponse.SenderInfo.builder()
-                    .userId(profile.getUserId())
-                    .fullName(profile.getFullName())
-                    .avatarUrl(profile.getAvatarUrl())
-                    .build();
-        } catch (Exception e) {
-            System.err.println("Error fetching sender profile: " + e.getMessage());
-            senderInfo = MessageResponse.SenderInfo.builder()
-                    .userId(message.getSenderId())
-                    .fullName("Unknown User")
-                    .avatarUrl(null)
-                    .build();
-        }
-
         return MessageResponse.builder()
                 .id(message.getId())
                 .chatId(message.getChatId())
@@ -303,13 +400,10 @@ public class ChatService {
                 .content(message.getContent())
                 .type(message.getType())
                 .fileUrl(message.getFileUrl())
-                .fileName(message.getFileName())
                 .createdAt(message.getCreatedAt())
                 .updatedAt(message.getUpdatedAt())
                 .isDeleted(message.isDeleted())
                 .readBy(message.getReadBy())
-                .isMine(message.getSenderId().equals(currentUserId))
-                .senderInfo(senderInfo)
                 .build();
     }
 
@@ -339,7 +433,6 @@ public class ChatService {
                     .content(message.getContent())
                     .type(message.getType())
                     .fileUrl(message.getFileUrl())
-                    .fileName(message.getFileName())
                     .createdAt(message.getCreatedAt())
                     .readBy(message.getReadBy())
                     .eventType(ChatMessageEvent.EventType.NEW_MESSAGE)
@@ -359,19 +452,6 @@ public class ChatService {
     }
 
     /**
-     * Gửi event tin nhắn đã xóa qua Kafka
-     */
-    private void sendDeleteMessageEventToKafka(Message message, Chat chat) {
-        try {
-            String otherUserId = chat.getParticipants().stream()
-                    .filter(id -> !id.equals(message.getSenderId()))
-                    .findFirst()
-                    .orElse(null);
-
-            ChatMessageEvent event = ChatMessageEvent.builder()
-                    .messageId(message.getId())
-                    .chatId(message.getChatId())
-                    .senderId(message.getSenderId())
                     .recipientId(otherUserId)
                     .eventType(ChatMessageEvent.EventType.MESSAGE_DELETED)
                     .build();

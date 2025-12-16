@@ -16,8 +16,8 @@ public class ChatResponse {
     private String lastMessage;
     private Instant lastMessageTime;
     private String lastMessageSenderId;
-    private int unreadCount; // Số tin nhắn chưa đọc
-    private ParticipantInfo otherParticipant; // Thông tin người chat với mình
+    private int unreadCount;
+    private ParticipantInfo otherParticipant;
     private Instant createdAt;
     private Instant updatedAt;
 
@@ -30,6 +30,6 @@ public class ChatResponse {
         private String userId;
         private String fullName;
         private String avatarUrl;
+        private boolean isOnline;
     }
 }
-

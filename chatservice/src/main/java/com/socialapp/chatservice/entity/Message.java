@@ -18,39 +18,41 @@ public class Message {
     @Id
     private String id;
 
-    private String chatId; // ID của conversation
+    private String chatId;
 
-    private String senderId; // ID người gửi
+    private String senderId;
 
-    private String content; // Nội dung tin nhắn
+    private MessageType type;
+    
+    private String content;
 
-    private MessageType type; // Loại tin nhắn: TEXT, IMAGE, FILE
-
-    private String fileUrl; // URL file nếu có
-
-    private String fileName; // Tên file nếu có
+    private String fileUrl;
 
     private Instant createdAt;
 
     private Instant updatedAt;
 
-    private boolean isDeleted; // Đánh dấu tin nhắn đã xóa
+    private boolean isDeleted;
 
-    private List<String> readBy; // Danh sách userId đã đọc tin nhắn này
+    private List<String> readBy;
+
+    private List<String> deletedBy;
 
     public enum MessageType {
         TEXT, IMAGE, FILE, VIDEO, AUDIO
     }
 
-    public Message(String chatId, String senderId, String content, MessageType type) {
+    public Message(String chatId, String senderId,MessageType type, String content,String fileUrl ) {
         this.chatId = chatId;
         this.senderId = senderId;
-        this.content = content;
         this.type = type;
+        this.content = content;
+        this.fileUrl = fileUrl;
         this.createdAt = Instant.now();
         this.updatedAt = Instant.now();
         this.isDeleted = false;
         this.readBy = new ArrayList<>();
+        this.deletedBy = new ArrayList<>();
     }
 }
 
