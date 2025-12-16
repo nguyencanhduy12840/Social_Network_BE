@@ -5,7 +5,8 @@ import com.socialapp.chatservice.dto.request.CreateChatRequest;
 import com.socialapp.chatservice.dto.request.SendMessageRequest;
 import com.socialapp.chatservice.dto.response.ChatResponse;
 import com.socialapp.chatservice.dto.response.MessageResponse;
-import com.socialapp.chatservice.dto.response.UserProfileResponse;
+import com.socialapp.chatservice.dto.response.OneUserProfileResponse;
+import com.socialapp.chatservice.dto.response.UserResponse;
 import com.socialapp.chatservice.entity.Chat;
 import com.socialapp.chatservice.entity.Message;
 import com.socialapp.chatservice.repository.ChatRepository;
@@ -334,25 +335,31 @@ public class ChatService {
                 .orElse(null);
 
         // Lấy thông tin user từ profile service
-        ChatResponse.ParticipantInfo otherParticipant = null;
+        UserResponse otherParticipant = null;
         if (otherUserId != null) {
             boolean isOnline = onlineUserService.isUserOnline(otherUserId);
             try {
-                UserProfileResponse profile = profileClient.getUserProfile(otherUserId);
-                otherParticipant = ChatResponse.ParticipantInfo.builder()
-                        .userId(profile.getUserId())
-                        .fullName(profile.getFullName())
-                        .avatarUrl(profile.getAvatarUrl())
-                        .isOnline(isOnline)
-                        .build();
+                OneUserProfileResponse response = profileClient.getUserProfile(otherUserId);
+                if (response != null && response.getData() != null) {
+                     OneUserProfileResponse.UserProfileOne profile = response.getData();
+                     otherParticipant = UserResponse.builder()
+                            .id(profile.getId())
+                            .username(profile.getUsername())
+                            .avatarUrl(profile.getAvatarUrl())
+                            // .isOnline(isOnline)
+                            .build();
+                }
             } catch (Exception e) {
                 System.err.println("Error fetching user profile: " + e.getMessage());
-                // Fallback nếu không lấy được thông tin
-                otherParticipant = ChatResponse.ParticipantInfo.builder()
-                        .userId(otherUserId)
-                        .fullName("Unknown User")
+            }
+            
+            // Fallback nếu không lấy được thông tin
+            if (otherParticipant == null) {
+                otherParticipant = UserResponse.builder()
+                        .id(otherUserId)
+                        .username("Unknown User")
                         .avatarUrl(null)
-                        .isOnline(isOnline)
+                        // .isOnline(isOnline)
                         .build();
             }
         }
@@ -415,7 +422,14 @@ public class ChatService {
     private void sendMessageEventToKafka(Message message, Chat chat, String currentUserId) {
         try {
             // Lấy thông tin người gửi
-            UserProfileResponse senderProfile = profileClient.getUserProfile(currentUserId);
+            OneUserProfileResponse senderProfileResponse = profileClient.getUserProfile(currentUserId);
+            String senderName = "Unknown User";
+            String senderAvatar = null;
+            
+            if (senderProfileResponse != null && senderProfileResponse.getData() != null) {
+                senderName = senderProfileResponse.getData().getUsername(); // Or FullName if available in UserResponse, but UserResponse uses username. GroupService uses username.
+                senderAvatar = senderProfileResponse.getData().getAvatarUrl();
+            }
 
             // Tìm người nhận
             String recipientId = chat.getParticipants().stream()
@@ -427,8 +441,8 @@ public class ChatService {
                     .messageId(message.getId())
                     .chatId(message.getChatId())
                     .senderId(message.getSenderId())
-                    .senderName(senderProfile.getFullName())
-                    .senderAvatar(senderProfile.getAvatarUrl())
+                    .senderName(senderName)
+                    .senderAvatar(senderAvatar)
                     .recipientId(recipientId)
                     .content(message.getContent())
                     .type(message.getType())

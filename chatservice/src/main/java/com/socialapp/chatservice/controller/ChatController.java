@@ -63,27 +63,10 @@ public class ChatController {
         return ResponseEntity.ok("Xóa đoạn chat thành công");
     }
 
-    @PutMapping("/{chatId}")
-    public ResponseEntity<String> markAsRead(@PathVariable String chatId) {
-        String currentUserId = SecurityUtil.getCurrentUserLogin()
-                .orElseThrow(() -> new RuntimeException("Bạn chưa đăng nhập"));
-
-        chatService.markAsRead(currentUserId, chatId);
-        return ResponseEntity.ok("Đánh dấu đã đọc thành công");
-    }
-
-    @GetMapping("/unread-count")
-    public ResponseEntity<Long> getUnreadCount() {
-        String currentUserId = SecurityUtil.getCurrentUserLogin()
-                .orElseThrow(() -> new RuntimeException("Bạn chưa đăng nhập"));
-        
-        return ResponseEntity.ok(chatService.getGlobalUnreadCount(currentUserId));
-    }
-
     @PostMapping(value = "/messages", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<MessageResponse> sendMessage(
             @RequestPart("message") String requestJson,
-            @RequestPart(value = "media", required = false) MultipartFile file) throws JsonProcessingException {
+            @RequestPart(value = "file", required = false) MultipartFile file) throws JsonProcessingException {
         String currentUserId = SecurityUtil.getCurrentUserLogin()
                 .orElseThrow(() -> new RuntimeException("Bạn chưa đăng nhập"));
 
@@ -115,8 +98,25 @@ public class ChatController {
         return ResponseEntity.ok("Xóa tin nhắn thành công");
     }
 
+    @PutMapping("/{chatId}")
+    public ResponseEntity<String> markAsRead(@PathVariable String chatId) {
+        String currentUserId = SecurityUtil.getCurrentUserLogin()
+                .orElseThrow(() -> new RuntimeException("Bạn chưa đăng nhập"));
+
+        chatService.markAsRead(currentUserId, chatId);
+        return ResponseEntity.ok("Đánh dấu đã đọc thành công");
+    }
+
+    // @GetMapping("/unread-count")
+    // public ResponseEntity<Long> getUnreadCount() {
+    //     String currentUserId = SecurityUtil.getCurrentUserLogin()
+    //             .orElseThrow(() -> new RuntimeException("Bạn chưa đăng nhập"));
+
+    //     return ResponseEntity.ok(chatService.getGlobalUnreadCount(currentUserId));
+    // }
+
     // @GetMapping("/users/{userId}/online")
     // public ResponseEntity<Boolean> isUserOnline(@PathVariable String userId) {
-    //     return ResponseEntity.ok(chatService.isUserOnline(userId));
+    // return ResponseEntity.ok(chatService.isUserOnline(userId));
     // }
 }

@@ -17,19 +17,7 @@ public class ChatResponse {
     private Instant lastMessageTime;
     private String lastMessageSenderId;
     private int unreadCount;
-    private ParticipantInfo otherParticipant;
+    private UserResponse otherParticipant;
     private Instant createdAt;
     private Instant updatedAt;
-
-    @Getter
-    @Setter
-    @AllArgsConstructor
-    @NoArgsConstructor
-    @Builder
-    public static class ParticipantInfo {
-        private String userId;
-        private String fullName;
-        private String avatarUrl;
-        private boolean isOnline;
-    }
 }
