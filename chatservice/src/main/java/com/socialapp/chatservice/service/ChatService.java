@@ -337,7 +337,7 @@ public class ChatService {
         // Lấy thông tin user từ profile service
         UserResponse otherParticipant = null;
         if (otherUserId != null) {
-            boolean isOnline = onlineUserService.isUserOnline(otherUserId);
+            // boolean isOnline = onlineUserService.isUserOnline(otherUserId);
             try {
                 OneUserProfileResponse response = profileClient.getUserProfile(otherUserId);
                 if (response != null && response.getData() != null) {

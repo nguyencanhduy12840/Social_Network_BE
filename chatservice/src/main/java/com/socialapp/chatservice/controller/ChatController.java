@@ -6,6 +6,8 @@ import com.socialapp.chatservice.dto.request.CreateChatRequest;
 import com.socialapp.chatservice.dto.request.SendMessageRequest;
 import com.socialapp.chatservice.dto.response.ChatResponse;
 import com.socialapp.chatservice.dto.response.MessageResponse;
+import com.socialapp.chatservice.dto.response.PagedChatResponse;
+import com.socialapp.chatservice.dto.response.PagedMessageResponse;
 import com.socialapp.chatservice.service.ChatService;
 import com.socialapp.chatservice.util.SecurityUtil;
 import jakarta.validation.Valid;
@@ -35,14 +37,25 @@ public class ChatController {
     }
 
     @GetMapping
-    public ResponseEntity<Page<ChatResponse>> getChats(
+    public ResponseEntity<PagedChatResponse> getChats(
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size) {
         String currentUserId = SecurityUtil.getCurrentUserLogin()
                 .orElseThrow(() -> new RuntimeException("Bạn chưa đăng nhập"));
 
-        Page<ChatResponse> chats = chatService.getChats(currentUserId, page, size);
-        return ResponseEntity.ok(chats);
+        Page<ChatResponse> chatsPage = chatService.getChats(currentUserId, page, size);
+        
+        PagedChatResponse response = PagedChatResponse.builder()
+                .chats(chatsPage.getContent())
+                .currentPage(chatsPage.getNumber())
+                .totalPages(chatsPage.getTotalPages())
+                .totalElements(chatsPage.getTotalElements())
+                .pageSize(chatsPage.getSize())
+                .hasNext(chatsPage.hasNext())
+                .hasPrevious(chatsPage.hasPrevious())
+                .build();
+                
+        return ResponseEntity.ok(response);
     }
 
     @GetMapping("/{chatId}")
@@ -63,6 +76,15 @@ public class ChatController {
         return ResponseEntity.ok("Xóa đoạn chat thành công");
     }
 
+    @PutMapping("/{chatId}")
+    public ResponseEntity<String> markAsRead(@PathVariable String chatId) {
+        String currentUserId = SecurityUtil.getCurrentUserLogin()
+                .orElseThrow(() -> new RuntimeException("Bạn chưa đăng nhập"));
+
+        chatService.markAsRead(currentUserId, chatId);
+        return ResponseEntity.ok("Đánh dấu đã đọc thành công");
+    }
+
     @PostMapping(value = "/messages", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<MessageResponse> sendMessage(
             @RequestPart("message") String requestJson,
@@ -78,15 +100,25 @@ public class ChatController {
     }
 
     @GetMapping("/{chatId}/messages")
-    public ResponseEntity<Page<MessageResponse>> getMessages(
+    public ResponseEntity<PagedMessageResponse> getMessages(
             @PathVariable String chatId,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "50") int size) {
         String currentUserId = SecurityUtil.getCurrentUserLogin()
                 .orElseThrow(() -> new RuntimeException("Bạn chưa đăng nhập"));
 
-        Page<MessageResponse> messages = chatService.getMessages(currentUserId, chatId, page, size);
-        return ResponseEntity.ok(messages);
+        Page<MessageResponse> messagesPage = chatService.getMessages(currentUserId, chatId, page, size);
+        
+        PagedMessageResponse response = PagedMessageResponse.builder()
+                .messages(messagesPage.getContent())
+                .currentPage(messagesPage.getNumber())
+                .totalPages(messagesPage.getTotalPages())
+                .totalElements(messagesPage.getTotalElements())
+                .pageSize(messagesPage.getSize())
+                .hasNext(messagesPage.hasNext())
+                .hasPrevious(messagesPage.hasPrevious())
+                .build();
+        return ResponseEntity.ok(response);
     }
 
     @DeleteMapping("/messages/{messageId}")
@@ -96,15 +128,6 @@ public class ChatController {
 
         chatService.deleteMessage(currentUserId, messageId);
         return ResponseEntity.ok("Xóa tin nhắn thành công");
-    }
-
-    @PutMapping("/{chatId}")
-    public ResponseEntity<String> markAsRead(@PathVariable String chatId) {
-        String currentUserId = SecurityUtil.getCurrentUserLogin()
-                .orElseThrow(() -> new RuntimeException("Bạn chưa đăng nhập"));
-
-        chatService.markAsRead(currentUserId, chatId);
-        return ResponseEntity.ok("Đánh dấu đã đọc thành công");
     }
 
     // @GetMapping("/unread-count")
