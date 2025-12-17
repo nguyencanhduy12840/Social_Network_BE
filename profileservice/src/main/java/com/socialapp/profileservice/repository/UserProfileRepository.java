@@ -68,4 +68,12 @@ public interface UserProfileRepository extends Neo4jRepository<UserProfile, Stri
         RETURN COUNT(friend)
         """)
     long countFriendsByUserId(String userId);
+
+    @Query("""
+        MATCH (u:user_profile)
+        WHERE toLower(u.username) CONTAINS toLower($keyword)
+        RETURN u
+        SKIP $skip LIMIT $size
+        """)
+    List<UserProfile> searchByUsername(String keyword, long skip, long size);
 }
