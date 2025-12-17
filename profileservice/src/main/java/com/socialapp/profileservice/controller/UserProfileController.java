@@ -12,6 +12,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RequestPart;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
@@ -47,5 +48,13 @@ public class UserProfileController {
                 mapper.readValue(profile, UpdateUserProfileRequest.class);
 
         return ResponseEntity.ok(userProfileService.updateProfile(request, mediaFile));
+    }
+
+    @GetMapping("/users/search")
+    ResponseEntity<List<UserProfileResponse>> searchUsers(
+            @RequestParam String keyword,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size) {
+        return ResponseEntity.ok(userProfileService.searchUsersByUsername(keyword, page, size));
     }
 }

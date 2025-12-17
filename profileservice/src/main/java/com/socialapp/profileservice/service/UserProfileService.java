@@ -179,4 +179,29 @@ public class UserProfileService {
         userProfile.setAvatarUrl(mediaUrls);
         return userProfileRepository.save(userProfile);
     }
+
+    public List<UserProfileResponse> searchUsersByUsername(String keyword, int page, int size) {
+        long skip = (long) page * size;
+        List<UserProfile> users = userProfileRepository.searchByUsername(keyword, skip, size);
+
+        Optional<String> currentUserId = SecurityUtil.getCurrentUserLogin();
+        String currentId = currentUserId.orElse(null);
+
+        return users.stream()
+                .map(user -> {
+                    UserProfileResponse response = userProfileMapper.toUserProfileResponse(user);
+
+                    if (currentId != null && currentId.equals(user.getId())) {
+                        response.setFriendStatus("SELF");
+                    } else {
+                        String friendshipStatus = determineFriendStatus(currentId, user.getId());
+                        response.setFriendStatus(friendshipStatus);
+                    }
+
+                    response.setFriendCount((int) friendshipService.getFriendCount(user.getId()));
+
+                    return response;
+                })
+                .toList();
+    }
 }
