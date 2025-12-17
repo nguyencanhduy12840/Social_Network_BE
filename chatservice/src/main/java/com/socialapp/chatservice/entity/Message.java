@@ -22,11 +22,9 @@ public class Message {
 
     private String senderId;
 
-    private MessageType type;
-    
     private String content;
 
-    private String fileUrl;
+    private List<String> attachments;
 
     private Instant createdAt;
 
@@ -38,16 +36,11 @@ public class Message {
 
     private List<String> deletedBy;
 
-    public enum MessageType {
-        TEXT, IMAGE, FILE, VIDEO, AUDIO
-    }
-
-    public Message(String chatId, String senderId,MessageType type, String content,String fileUrl ) {
+    public Message(String chatId, String senderId, String content,List<String> attachments ) {
         this.chatId = chatId;
         this.senderId = senderId;
-        this.type = type;
         this.content = content;
-        this.fileUrl = fileUrl;
+        this.attachments = attachments;
         this.createdAt = Instant.now();
         this.updatedAt = Instant.now();
         this.isDeleted = false;

@@ -16,6 +16,7 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
+import java.util.List;
 
 @RestController
 public class ChatController {
@@ -44,7 +45,7 @@ public class ChatController {
                 .orElseThrow(() -> new RuntimeException("Bạn chưa đăng nhập"));
 
         Page<ChatResponse> chatsPage = chatService.getChats(currentUserId, page, size);
-        
+
         PagedChatResponse response = PagedChatResponse.builder()
                 .chats(chatsPage.getContent())
                 .currentPage(chatsPage.getNumber())
@@ -54,7 +55,7 @@ public class ChatController {
                 .hasNext(chatsPage.hasNext())
                 .hasPrevious(chatsPage.hasPrevious())
                 .build();
-                
+
         return ResponseEntity.ok(response);
     }
 
@@ -88,14 +89,15 @@ public class ChatController {
     @PostMapping(value = "/messages", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<MessageResponse> sendMessage(
             @RequestPart("message") String requestJson,
-            @RequestPart(value = "file", required = false) MultipartFile file) throws JsonProcessingException {
+            @RequestPart(value = "attachments", required = false) List<MultipartFile> files)
+            throws JsonProcessingException {
         String currentUserId = SecurityUtil.getCurrentUserLogin()
                 .orElseThrow(() -> new RuntimeException("Bạn chưa đăng nhập"));
 
         ObjectMapper mapper = new ObjectMapper();
         SendMessageRequest request = mapper.readValue(requestJson, SendMessageRequest.class);
 
-        MessageResponse message = chatService.sendMessage(currentUserId, request, file);
+        MessageResponse message = chatService.sendMessage(currentUserId, request, files);
         return ResponseEntity.ok(message);
     }
 
@@ -108,7 +110,7 @@ public class ChatController {
                 .orElseThrow(() -> new RuntimeException("Bạn chưa đăng nhập"));
 
         Page<MessageResponse> messagesPage = chatService.getMessages(currentUserId, chatId, page, size);
-        
+
         PagedMessageResponse response = PagedMessageResponse.builder()
                 .messages(messagesPage.getContent())
                 .currentPage(messagesPage.getNumber())
@@ -132,10 +134,10 @@ public class ChatController {
 
     // @GetMapping("/unread-count")
     // public ResponseEntity<Long> getUnreadCount() {
-    //     String currentUserId = SecurityUtil.getCurrentUserLogin()
-    //             .orElseThrow(() -> new RuntimeException("Bạn chưa đăng nhập"));
+    // String currentUserId = SecurityUtil.getCurrentUserLogin()
+    // .orElseThrow(() -> new RuntimeException("Bạn chưa đăng nhập"));
 
-    //     return ResponseEntity.ok(chatService.getGlobalUnreadCount(currentUserId));
+    // return ResponseEntity.ok(chatService.getGlobalUnreadCount(currentUserId));
     // }
 
     // @GetMapping("/users/{userId}/online")

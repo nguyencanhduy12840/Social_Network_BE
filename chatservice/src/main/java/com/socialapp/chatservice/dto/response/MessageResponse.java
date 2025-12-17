@@ -1,6 +1,5 @@
 package com.socialapp.chatservice.dto.response;
 
-import com.socialapp.chatservice.entity.Message;
 import lombok.*;
 
 import java.time.Instant;
@@ -15,9 +14,8 @@ public class MessageResponse {
     private String id;
     private String chatId;
     private String senderId;
-    private Message.MessageType type;
     private String content;
-    private String fileUrl;
+    private List<String> attachments;
     private Instant createdAt;
     private Instant updatedAt;
     private boolean isDeleted;

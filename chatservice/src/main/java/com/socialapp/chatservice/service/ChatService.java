@@ -76,7 +76,7 @@ public class ChatService {
      * Gửi tin nhắn
      */
     @Transactional
-    public MessageResponse sendMessage(String currentUserId, SendMessageRequest request, org.springframework.web.multipart.MultipartFile file) {
+    public MessageResponse sendMessage(String currentUserId, SendMessageRequest request, List<org.springframework.web.multipart.MultipartFile> files) {
         // Kiểm tra chat có tồn tại không
         Chat chat = chatRepository.findById(request.getChatId())
                 .orElseThrow(() -> new RuntimeException("Chat không tồn tại"));
@@ -86,62 +86,56 @@ public class ChatService {
             throw new RuntimeException("Bạn không có quyền gửi tin nhắn trong chat này");
         }
 
-        String fileUrl = null;
-        Message.MessageType type = Message.MessageType.TEXT;
+        List<String> attachments = new ArrayList<>();
 
         // Xử lý file upload
-        if (file != null && !file.isEmpty()) {
-            String contentType = file.getContentType();
-            
-            if (contentType != null) {
-                if (contentType.startsWith("image/")) {
-                    type = Message.MessageType.IMAGE;
-                    fileUrl = cloudinaryService.uploadImage(file);
-                } else if (contentType.startsWith("video/")) {
-                    type = Message.MessageType.VIDEO;
-                    fileUrl = cloudinaryService.uploadVideo(file);
-                } else if (contentType.startsWith("audio/")) {
-                    type = Message.MessageType.AUDIO;
-                    fileUrl = cloudinaryService.uploadVideo(file); 
+        if (files != null && !files.isEmpty()) {
+            for (org.springframework.web.multipart.MultipartFile file : files) {
+                if (file.isEmpty()) continue;
+                
+                String contentType = file.getContentType();
+                String url;
+                
+                if (contentType != null) {
+                    if (contentType.startsWith("image/")) {
+                        url = cloudinaryService.uploadImage(file);
+                    } else if (contentType.startsWith("video/")) {
+                        url = cloudinaryService.uploadVideo(file);
+                    } else if (contentType.startsWith("audio/")) {
+                        url = cloudinaryService.uploadVideo(file); 
+                    } else {
+                        url = cloudinaryService.uploadFile(file);
+                    }
                 } else {
-                    type = Message.MessageType.FILE;
-                    fileUrl = cloudinaryService.uploadFile(file);
+                    url = cloudinaryService.uploadFile(file);
                 }
-            } else {
-                type = Message.MessageType.FILE;
-                fileUrl = cloudinaryService.uploadFile(file);
+                attachments.add(url);
             }
         }
 
         // Tạo tin nhắn mới
-        Message message = Message.builder()
-                .chatId(request.getChatId())
-                .senderId(currentUserId)
-                .content(request.getContent())
-                .type(type)
-                .fileUrl(fileUrl)
-                .createdAt(Instant.now())
-                .updatedAt(Instant.now())
-                .isDeleted(false)
-                .readBy(new ArrayList<>(Collections.singletonList(currentUserId)))
-                .build();
+        Message message = new Message(
+            request.getChatId(),
+            currentUserId,
+            request.getContent(),
+            attachments
+        );
 
         message = messageRepository.save(message);
 
         // Cập nhật thông tin tin nhắn cuối trong chat
         chat.setLastMessageId(message.getId());
-        String lastMessageContent = message.getContent();
-        if (type == Message.MessageType.IMAGE) lastMessageContent = "Đã gửi một ảnh";
-        else if (type == Message.MessageType.VIDEO) lastMessageContent = "Đã gửi một video";
-        else if (type == Message.MessageType.AUDIO) lastMessageContent = "Đã gửi một ghi âm";
-        else if (type == Message.MessageType.FILE) lastMessageContent = "Đã gửi một file";
         
-        if (message.getContent() != null && !message.getContent().isEmpty()) {
-             chat.setLastMessage(message.getContent());
-        } else {
-             chat.setLastMessage(lastMessageContent);
+        String lastMessageContent = message.getContent();
+        if (lastMessageContent == null || lastMessageContent.isEmpty()) {
+            if (!attachments.isEmpty()) {
+                lastMessageContent = "Sent " + (attachments.size() > 1 ? attachments.size() + " attachments" : "an attachment");
+            } else {
+                 lastMessageContent = "Sent a message";
+            }
         }
         
+        chat.setLastMessage(lastMessageContent);
         chat.setLastMessageTime(message.getCreatedAt());
         chat.setLastMessageSenderId(currentUserId);
         chat.setUpdatedAt(Instant.now());
@@ -189,7 +183,16 @@ public class ChatService {
         Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "updatedAt"));
         Page<Chat> chats = chatRepository.findByParticipantsContainingAndDeletedByNotContaining(currentUserId, currentUserId, pageable);
 
-        return chats.map(chat -> mapToChatResponse(chat, currentUserId));
+        // Filter out chats that are effectively empty (no last message visible)
+        // Note: This modifies the page size potentially.
+        List<ChatResponse> filteredChats = chats.stream()
+            .map(chat -> mapToChatResponse(chat, currentUserId))
+            .filter(chatResponse -> chatResponse.getLastMessageTime() != null) 
+            .toList();
+
+        return new org.springframework.data.domain.PageImpl<>(filteredChats, pageable, chats.getTotalElements()); 
+        // Note: Total elements might be inaccurate if we filter, but it's hard to get accurate count without complex aggregation query. 
+        // User accepted this trade-off in plan.
     }
 
     public long getGlobalUnreadCount(String currentUserId) {
@@ -378,12 +381,14 @@ public class ChatService {
             lastMessageTime = lastMessage.getCreatedAt();
             lastMessageSenderId = lastMessage.getSenderId();
 
-            // Format content based on type
-            if (lastMessage.getType() == Message.MessageType.IMAGE) lastMessageContent = "Send an image";
-            else if (lastMessage.getType() == Message.MessageType.VIDEO) lastMessageContent = "Send a video";
-            else if (lastMessage.getType() == Message.MessageType.AUDIO) lastMessageContent = "Send an audio";
-            else if (lastMessage.getType() == Message.MessageType.FILE) lastMessageContent = "Send a file";
-            else lastMessageContent = lastMessage.getContent();
+            String content = lastMessage.getContent();
+            if (content != null && !content.isEmpty()) {
+                lastMessageContent = content;
+            } else if (lastMessage.getAttachments() != null && !lastMessage.getAttachments().isEmpty()) {
+                lastMessageContent = "Sent " + (lastMessage.getAttachments().size() > 1 ? lastMessage.getAttachments().size() + " attachments" : "an attachment");
+            } else {
+                lastMessageContent = "Sent a message";
+            }
         }
 
         return ChatResponse.builder()
@@ -405,8 +410,7 @@ public class ChatService {
                 .chatId(message.getChatId())
                 .senderId(message.getSenderId())
                 .content(message.getContent())
-                .type(message.getType())
-                .fileUrl(message.getFileUrl())
+                .attachments(message.getAttachments())
                 .createdAt(message.getCreatedAt())
                 .updatedAt(message.getUpdatedAt())
                 .isDeleted(message.isDeleted())
@@ -445,8 +449,7 @@ public class ChatService {
                     .senderAvatar(senderAvatar)
                     .recipientId(recipientId)
                     .content(message.getContent())
-                    .type(message.getType())
-                    .fileUrl(message.getFileUrl())
+                    .attachments(message.getAttachments())
                     .createdAt(message.getCreatedAt())
                     .readBy(message.getReadBy())
                     .eventType(ChatMessageEvent.EventType.NEW_MESSAGE)

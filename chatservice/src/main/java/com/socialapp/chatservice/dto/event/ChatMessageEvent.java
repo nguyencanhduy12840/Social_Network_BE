@@ -1,6 +1,5 @@
 package com.socialapp.chatservice.dto.event;
 
-import com.socialapp.chatservice.entity.Message;
 import lombok.*;
 
 import java.io.Serializable;
@@ -20,18 +19,17 @@ public class ChatMessageEvent implements Serializable {
     private String senderId;
     private String senderName;
     private String senderAvatar;
-    private String recipientId; // Người nhận
+    private String recipientId; 
     private String content;
-    private Message.MessageType type;
-    private String fileUrl;
+    private List<String> attachments;
     private Instant createdAt;
     private List<String> readBy;
     private EventType eventType;
 
     public enum EventType {
-        NEW_MESSAGE, // Tin nhắn mới
-        MESSAGE_DELETED, // Tin nhắn bị xóa
-        MESSAGE_READ, // Tin nhắn đã đọc
-        TYPING // Đang nhập liệu
+        NEW_MESSAGE,
+        MESSAGE_DELETED,
+        MESSAGE_READ,
+        TYPING
     }
 }
