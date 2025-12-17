@@ -431,7 +431,7 @@ public class ChatService {
             String senderAvatar = null;
             
             if (senderProfileResponse != null && senderProfileResponse.getData() != null) {
-                senderName = senderProfileResponse.getData().getUsername(); // Or FullName if available in UserResponse, but UserResponse uses username. GroupService uses username.
+                senderName = senderProfileResponse.getData().getUsername();
                 senderAvatar = senderProfileResponse.getData().getAvatarUrl();
             }
 
@@ -441,18 +441,22 @@ public class ChatService {
                     .findFirst()
                     .orElse(null);
 
+            UserResponse senderUser = UserResponse.builder()
+                    .id(message.getSenderId())
+                    .username(senderName)
+                    .avatarUrl(senderAvatar)
+                    .build();
+
             ChatMessageEvent event = ChatMessageEvent.builder()
-                    .messageId(message.getId())
+                    .eventType(ChatMessageEvent.EventType.NEW_MESSAGE)
                     .chatId(message.getChatId())
-                    .senderId(message.getSenderId())
-                    .senderName(senderName)
-                    .senderAvatar(senderAvatar)
+                    .messageId(message.getId())
+                    .sender(senderUser)
                     .recipientId(recipientId)
                     .content(message.getContent())
                     .attachments(message.getAttachments())
                     .createdAt(message.getCreatedAt())
                     .readBy(message.getReadBy())
-                    .eventType(ChatMessageEvent.EventType.NEW_MESSAGE)
                     .build();
 
             // Gửi qua Kafka
@@ -469,18 +473,6 @@ public class ChatService {
     }
 
     /**
-                    .recipientId(otherUserId)
-                    .eventType(ChatMessageEvent.EventType.MESSAGE_DELETED)
-                    .build();
-
-            kafkaProducerService.sendChatMessage(event);
-
-        } catch (Exception e) {
-            System.err.println("Error sending delete event to Kafka: " + e.getMessage());
-        }
-    }
-
-    /**
      * Gửi event tin nhắn đã đọc qua Kafka
      */
     private void sendReadMessageEventToKafka(Message message, Chat chat, String readerId) {
@@ -491,12 +483,12 @@ public class ChatService {
                     .orElse(null);
 
             ChatMessageEvent event = ChatMessageEvent.builder()
-                    .messageId(message.getId())
+                    .eventType(ChatMessageEvent.EventType.MESSAGE_READ)
                     .chatId(message.getChatId())
-                    .senderId(readerId)
+                    .messageId(message.getId())
+                    .sender(UserResponse.builder().id(readerId).build())
                     .recipientId(otherUserId)
                     .readBy(message.getReadBy())
-                    .eventType(ChatMessageEvent.EventType.MESSAGE_READ)
                     .build();
 
             kafkaProducerService.sendChatMessage(event);

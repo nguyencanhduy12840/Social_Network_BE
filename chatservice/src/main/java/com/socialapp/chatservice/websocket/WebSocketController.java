@@ -65,11 +65,11 @@ public class WebSocketController {
 
             // Tạo event
             com.socialapp.chatservice.dto.event.ChatMessageEvent event = com.socialapp.chatservice.dto.event.ChatMessageEvent.builder()
-                    .chatId(request.getChatId())
-                    .senderId(currentUserId)
-                    .recipientId(recipientId)
-                    .content(request.isTyping() ? "TYPING_START" : "TYPING_STOP") // Dùng content để đánh dấu
                     .eventType(com.socialapp.chatservice.dto.event.ChatMessageEvent.EventType.TYPING)
+                    .chatId(request.getChatId())
+                    .sender(com.socialapp.chatservice.dto.response.UserResponse.builder().id(currentUserId).build())
+                    .recipientId(recipientId)
+                    .content(request.isTyping() ? "TYPING_START" : "TYPING_STOP")
                     .build();
 
             // Gửi qua Kafka -> Consumer -> WebSocket -> Client

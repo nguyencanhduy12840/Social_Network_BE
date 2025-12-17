@@ -77,5 +77,22 @@ public class WebSocketService {
             log.error("Error sending typing event to user {}: {}", userId, e.getMessage());
         }
     }
+
+    /**
+     * Gửi online status event tới user
+     * Client subscribes to: /user/{userId}/queue/online-status
+     */
+    public void sendOnlineStatusToUser(String userId, Object event) {
+        try {
+            messagingTemplate.convertAndSendToUser(
+                    userId,
+                    "/queue/online-status",
+                    event
+            );
+            log.debug("Sent online status to user {}", userId);
+        } catch (Exception e) {
+            log.error("Error sending online status to user {}: {}", userId, e.getMessage());
+        }
+    }
 }
 

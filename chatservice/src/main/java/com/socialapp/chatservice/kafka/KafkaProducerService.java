@@ -1,6 +1,7 @@
 package com.socialapp.chatservice.kafka;
 
 import com.socialapp.chatservice.dto.event.ChatMessageEvent;
+import com.socialapp.chatservice.dto.event.NotificationEvent;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.kafka.core.KafkaTemplate;
@@ -15,6 +16,7 @@ public class KafkaProducerService {
 
     private static final String CHAT_MESSAGE_TOPIC = "chat-messages";
     private static final String CHAT_NOTIFICATION_TOPIC = "chat-notifications";
+    private static final String NOTIFICATION_EVENTS_TOPIC = "notification-events"; // Topic của NotificationService
 
     /**
      * Gửi event tin nhắn mới vào Kafka
@@ -38,7 +40,7 @@ public class KafkaProducerService {
     }
 
     /**
-     * Gửi notification về tin nhắn mới
+     * Gửi notification về tin nhắn mới (internal topic)
      */
     public void sendChatNotification(ChatMessageEvent event) {
         try {
@@ -54,6 +56,27 @@ public class KafkaProducerService {
                     });
         } catch (Exception e) {
             log.error("Error sending notification to Kafka: {}", e.getMessage(), e);
+        }
+    }
+
+    /**
+     * Gửi notification tới NotificationService để xử lý in-app notification và push notification
+     */
+    public void sendToNotificationService(NotificationEvent event) {
+        try {
+            log.info("Sending notification to NotificationService: receiverId={}", 
+                    event.getPayload() != null ? event.getPayload().getReceiverId() : "null");
+
+            kafkaTemplate.send(NOTIFICATION_EVENTS_TOPIC, event)
+                    .whenComplete((result, ex) -> {
+                        if (ex == null) {
+                            log.info("Notification sent to NotificationService successfully");
+                        } else {
+                            log.error("Failed to send to NotificationService: {}", ex.getMessage());
+                        }
+                    });
+        } catch (Exception e) {
+            log.error("Error sending to NotificationService: {}", e.getMessage(), e);
         }
     }
 }
