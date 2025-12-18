@@ -146,29 +146,6 @@ public class UserProfileService {
         return userProfileResponse;
     }
 
-    public java.util.Map<String, UserProfileResponse> getUserProfilesByIds(List<String> userIds) {
-        java.util.Map<String, UserProfileResponse> profileMap = new java.util.HashMap<>();
-        
-        if (userIds == null || userIds.isEmpty()) {
-            return profileMap;
-        }
-
-        List<UserProfile> userProfiles = userProfileRepository.findAllById(userIds);
-        
-        for (UserProfile userProfile : userProfiles) {
-            try {
-                UserProfileResponse response = userProfileMapper.toUserProfileResponse(userProfile);
-                // Map by userId (not id) for consistency with postservice expectations
-                String userId = userProfile.getUserId() != null ? userProfile.getUserId() : userProfile.getId();
-                profileMap.put(userId, response);
-            } catch (Exception e) {
-                log.error("Error converting user profile for userId: " + userProfile.getId(), e);
-            }
-        }
-        
-        return profileMap;
-    }
-
     public UserProfile updateProfile(UpdateUserProfileRequest request, MultipartFile mediaFile){
         UserProfile userProfile =
                 userProfileRepository.findByUserId(request.getUserId())
