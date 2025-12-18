@@ -45,4 +45,9 @@ public interface PostRepository extends MongoRepository<Post, String>, CustomPos
     Page<Post> findByAuthorIdAndTypeAndGroupIdIsNullOrderByCreatedAtDesc(String authorId, String type, Pageable pageable);
 
     Page<Post> findByAuthorIdAndTypeAndPrivacyInAndGroupIdIsNullOrderByCreatedAtDesc(String authorId, String type, Collection<String> privacies, Pageable pageable);
+
+    // Delete methods for group operations
+    void deleteAllByGroupId(String groupId);
+
+    void deleteAllByGroupIdAndAuthorId(String groupId, String authorId);
 }

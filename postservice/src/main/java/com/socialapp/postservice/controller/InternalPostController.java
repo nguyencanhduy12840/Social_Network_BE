@@ -2,10 +2,7 @@ package com.socialapp.postservice.controller;
 
 import com.socialapp.postservice.service.PostService;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/internal")
@@ -19,5 +16,19 @@ public class InternalPostController {
     @GetMapping("/count")
     public ResponseEntity<Integer> countPostsByUserId(@RequestParam String userId) {
         return ResponseEntity.ok(postService.countPostsByUserId(userId));
+    }
+
+    @DeleteMapping("/group/{groupId}")
+    public ResponseEntity<Void> deletePostsByGroupId(@PathVariable String groupId) {
+        postService.deletePostsByGroupId(groupId);
+        return ResponseEntity.noContent().build();
+    }
+
+    @DeleteMapping("/group/{groupId}/author/{authorId}")
+    public ResponseEntity<Void> deletePostsByGroupIdAndAuthorId(
+            @PathVariable String groupId,
+            @PathVariable String authorId) {
+        postService.deletePostsByGroupIdAndAuthorId(groupId, authorId);
+        return ResponseEntity.noContent().build();
     }
 }

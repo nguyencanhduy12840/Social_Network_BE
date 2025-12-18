@@ -490,4 +490,15 @@ public class PostService {
     public int countPostsByUserId(String userId) {
         return postRepository.countByAuthorId(userId);
     }
+
+    // Methods for group operations
+    @Transactional
+    public void deletePostsByGroupId(String groupId) {
+        postRepository.deleteAllByGroupId(groupId);
+    }
+
+    @Transactional
+    public void deletePostsByGroupIdAndAuthorId(String groupId, String authorId) {
+        postRepository.deleteAllByGroupIdAndAuthorId(groupId, authorId);
+    }
 }
