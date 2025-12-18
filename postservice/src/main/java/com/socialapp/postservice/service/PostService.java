@@ -211,12 +211,33 @@ public class PostService {
             postsPage = postRepository.findByPrivacyAndTypeOrderByCreatedAtDesc("PUBLIC", type, pageable);
         }
 
+        // Collect all unique author IDs
+        List<String> authorIds = postsPage.getContent().stream()
+                .map(Post::getAuthorId)
+                .distinct()
+                .toList();
+
+        // Fetch all author profiles in one batch call
+        java.util.Map<String, OneUserProfileResponse.UserProfileOne> authorProfiles = new java.util.HashMap<>();
+        if (!authorIds.isEmpty()) {
+            try {
+                authorProfiles = profileClient.getUserProfiles(authorIds);
+            } catch (Exception e) {
+                System.err.println("Error fetching author profiles: " + e.getMessage());
+            }
+        }
+
         // Convert posts to response
         List<PostResponse> postResponses = new ArrayList<>();
         for (Post post : postsPage.getContent()) {
             PostResponse postResponse = postConverter.convertToPostResponse(post);
-            OneUserProfileResponse authorProfile = profileClient.getUserProfile(post.getAuthorId());
-            postResponse.setAuthorProfile(authorProfile.getData());
+            
+            // Get author profile from the batch result
+            OneUserProfileResponse.UserProfileOne authorProfile = authorProfiles.get(post.getAuthorId());
+            if (authorProfile != null) {
+                postResponse.setAuthorProfile(authorProfile);
+            }
+            
             postResponses.add(postResponse);
         }
 
@@ -299,10 +320,24 @@ public class PostService {
         if(post.isPresent()){
             Post currentPost = post.get();
             List<String> likeUserIds = currentPost.getLikes();
+            
+            // Fetch all user profiles in one batch call
+            java.util.Map<String, OneUserProfileResponse.UserProfileOne> userProfiles = new java.util.HashMap<>();
+            if (!likeUserIds.isEmpty()) {
+                try {
+                    userProfiles = profileClient.getUserProfiles(likeUserIds);
+                } catch (Exception e) {
+                    System.err.println("Error fetching user profiles: " + e.getMessage());
+                }
+            }
+            
+            // Convert to list maintaining order
             List<OneUserProfileResponse.UserProfileOne> likeUsers = new ArrayList<>();
             for(String userId : likeUserIds){
-                OneUserProfileResponse authorProfile = profileClient.getUserProfile(userId);
-                likeUsers.add(authorProfile.getData());
+                OneUserProfileResponse.UserProfileOne userProfile = userProfiles.get(userId);
+                if (userProfile != null) {
+                    likeUsers.add(userProfile);
+                }
             }
             return likeUsers;
         }
@@ -341,10 +376,24 @@ public class PostService {
          if (post.isPresent()) {
              Post currentPost = post.get();
              List<String> seenUserIds = currentPost.getSeenBy();
+             
+             // Fetch all user profiles in one batch call
+             java.util.Map<String, OneUserProfileResponse.UserProfileOne> userProfiles = new java.util.HashMap<>();
+             if (!seenUserIds.isEmpty()) {
+                 try {
+                     userProfiles = profileClient.getUserProfiles(seenUserIds);
+                 } catch (Exception e) {
+                     System.err.println("Error fetching user profiles: " + e.getMessage());
+                 }
+             }
+             
+             // Convert to list maintaining order
              List<OneUserProfileResponse.UserProfileOne> seenUsers = new ArrayList<>();
              for (String userId : seenUserIds) {
-                 OneUserProfileResponse authorProfile = profileClient.getUserProfile(userId);
-                 seenUsers.add(authorProfile.getData());
+                 OneUserProfileResponse.UserProfileOne userProfile = userProfiles.get(userId);
+                 if (userProfile != null) {
+                     seenUsers.add(userProfile);
+                 }
              }
              return seenUsers;
          }
@@ -374,12 +423,33 @@ public class PostService {
 
         Page<Post> postsPage = postRepository.findAllByGroupIdOrderByCreatedAtDesc(groupId, pageable);
 
+        // Collect all unique author IDs
+        List<String> authorIds = postsPage.getContent().stream()
+                .map(Post::getAuthorId)
+                .distinct()
+                .toList();
+
+        // Fetch all author profiles in one batch call
+        java.util.Map<String, OneUserProfileResponse.UserProfileOne> authorProfiles = new java.util.HashMap<>();
+        if (!authorIds.isEmpty()) {
+            try {
+                authorProfiles = profileClient.getUserProfiles(authorIds);
+            } catch (Exception e) {
+                System.err.println("Error fetching author profiles: " + e.getMessage());
+            }
+        }
+
         // Convert posts to response
         List<PostResponse> postResponses = new ArrayList<>();
         for (Post post : postsPage.getContent()) {
             PostResponse postResponse = postConverter.convertToPostResponse(post);
-            OneUserProfileResponse authorProfile = profileClient.getUserProfile(post.getAuthorId());
-            postResponse.setAuthorProfile(authorProfile.getData());
+            
+            // Get author profile from the batch result
+            OneUserProfileResponse.UserProfileOne authorProfile = authorProfiles.get(post.getAuthorId());
+            if (authorProfile != null) {
+                postResponse.setAuthorProfile(authorProfile);
+            }
+            
             postResponses.add(postResponse);
         }
 
@@ -421,12 +491,33 @@ public class PostService {
             }
         }
 
+        // Collect all unique author IDs
+        List<String> authorIds = postsPage.getContent().stream()
+                .map(Post::getAuthorId)
+                .distinct()
+                .toList();
+
+        // Fetch all author profiles in one batch call
+        java.util.Map<String, OneUserProfileResponse.UserProfileOne> authorProfiles = new java.util.HashMap<>();
+        if (!authorIds.isEmpty()) {
+            try {
+                authorProfiles = profileClient.getUserProfiles(authorIds);
+            } catch (Exception e) {
+                System.err.println("Error fetching author profiles: " + e.getMessage());
+            }
+        }
+
         // Convert posts to response
         List<PostResponse> postResponses = new ArrayList<>();
         for (Post post : postsPage.getContent()) {
             PostResponse postResponse = postConverter.convertToPostResponse(post);
-            OneUserProfileResponse authorProfile = profileClient.getUserProfile(post.getAuthorId());
-            postResponse.setAuthorProfile(authorProfile.getData());
+            
+            // Get author profile from the batch result
+            OneUserProfileResponse.UserProfileOne authorProfile = authorProfiles.get(post.getAuthorId());
+            if (authorProfile != null) {
+                postResponse.setAuthorProfile(authorProfile);
+            }
+            
             postResponses.add(postResponse);
         }
 
