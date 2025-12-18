@@ -29,5 +29,5 @@ public class PostResponse {
     List<String> likes;
     List<String> seenBy;
     Integer commentsCount;
-    OneUserProfileResponse.UserProfileOne authorProfile;
+    UserProfile.UserProfileOne authorProfile;
 }

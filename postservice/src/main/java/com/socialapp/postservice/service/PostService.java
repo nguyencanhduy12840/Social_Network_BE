@@ -3,6 +3,7 @@ package com.socialapp.postservice.service;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 
@@ -133,7 +134,7 @@ public class PostService {
                                 .authorId(userId)
                                 .groupId("")
                                 .eventType("NEW_POST")
-                                .receiverId(friend.getUserId())
+                                .receiverId(friend.getId())
                                 .build();
 
                         BaseEvent baseEvent = BaseEvent.builder()
@@ -201,7 +202,7 @@ public class PostService {
             // Lấy danh sách bạn bè
             UserProfile friends = profileClient.getFriends(currentUserId);
             List<String> friendIds = friends.getData().stream()
-                    .map(UserProfile.UserProfileOne::getUserId)
+                    .map(UserProfile.UserProfileOne::getId)
                     .toList();
 
             // Sử dụng custom repository với MongoDB query - tối ưu hiệu năng
@@ -211,12 +212,38 @@ public class PostService {
             postsPage = postRepository.findByPrivacyAndTypeOrderByCreatedAtDesc("PUBLIC", type, pageable);
         }
 
-        // Convert posts to response
+        // Collect UNIQUE author IDs
+        List<String> uniqueAuthorIds = postsPage.getContent().stream()
+                .map(Post::getAuthorId)
+                .distinct()
+                .toList();
+
+        // Fetch profiles for UNIQUE IDs and cache in map
+        Map<String, UserProfile.UserProfileOne> profileCache = new java.util.HashMap<>();
+        for (String authorId : uniqueAuthorIds) {
+            try {
+                OneUserProfileResponse response = profileClient.getUserProfile(authorId);
+                if (response != null && response.getData() != null) {
+                    // Convert to simplified UserProfile.UserProfileOne
+                    UserProfile.UserProfileOne simpleProfile = new UserProfile.UserProfileOne();
+                    simpleProfile.setId(response.getData().getId());
+                    simpleProfile.setUsername(response.getData().getUsername());
+                    simpleProfile.setAvatarUrl(response.getData().getAvatarUrl());
+                    profileCache.put(authorId, simpleProfile);
+                }
+            } catch (Exception e) {
+                System.err.println("Error fetching profile for " + authorId + ": " + e.getMessage());
+            }
+        }
+
+        // Convert posts to response using cached profiles
         List<PostResponse> postResponses = new ArrayList<>();
         for (Post post : postsPage.getContent()) {
             PostResponse postResponse = postConverter.convertToPostResponse(post);
-            OneUserProfileResponse authorProfile = profileClient.getUserProfile(post.getAuthorId());
-            postResponse.setAuthorProfile(authorProfile.getData());
+            UserProfile.UserProfileOne profile = profileCache.get(post.getAuthorId());
+            if (profile != null) {
+                postResponse.setAuthorProfile(profile);
+            }
             postResponses.add(postResponse);
         }
 
@@ -288,7 +315,13 @@ public class PostService {
             Post currentPost = post.get();
             PostResponse postResponse = postConverter.convertToPostResponse(currentPost);
             OneUserProfileResponse authorProfile = profileClient.getUserProfile(currentPost.getAuthorId());
-            postResponse.setAuthorProfile(authorProfile.getData());
+            if (authorProfile != null && authorProfile.getData() != null) {
+                UserProfile.UserProfileOne simpleProfile = new UserProfile.UserProfileOne();
+                simpleProfile.setId(authorProfile.getData().getId());
+                simpleProfile.setUsername(authorProfile.getData().getUsername());
+                simpleProfile.setAvatarUrl(authorProfile.getData().getAvatarUrl());
+                postResponse.setAuthorProfile(simpleProfile);
+            }
             return postResponse;
         }
         return null;
@@ -379,7 +412,13 @@ public class PostService {
         for (Post post : postsPage.getContent()) {
             PostResponse postResponse = postConverter.convertToPostResponse(post);
             OneUserProfileResponse authorProfile = profileClient.getUserProfile(post.getAuthorId());
-            postResponse.setAuthorProfile(authorProfile.getData());
+            if (authorProfile != null && authorProfile.getData() != null) {
+                UserProfile.UserProfileOne simpleProfile = new UserProfile.UserProfileOne();
+                simpleProfile.setId(authorProfile.getData().getId());
+                simpleProfile.setUsername(authorProfile.getData().getUsername());
+                simpleProfile.setAvatarUrl(authorProfile.getData().getAvatarUrl());
+                postResponse.setAuthorProfile(simpleProfile);
+            }
             postResponses.add(postResponse);
         }
 
@@ -426,7 +465,13 @@ public class PostService {
         for (Post post : postsPage.getContent()) {
             PostResponse postResponse = postConverter.convertToPostResponse(post);
             OneUserProfileResponse authorProfile = profileClient.getUserProfile(post.getAuthorId());
-            postResponse.setAuthorProfile(authorProfile.getData());
+            if (authorProfile != null && authorProfile.getData() != null) {
+                UserProfile.UserProfileOne simpleProfile = new UserProfile.UserProfileOne();
+                simpleProfile.setId(authorProfile.getData().getId());
+                simpleProfile.setUsername(authorProfile.getData().getUsername());
+                simpleProfile.setAvatarUrl(authorProfile.getData().getAvatarUrl());
+                postResponse.setAuthorProfile(simpleProfile);
+            }
             postResponses.add(postResponse);
         }
 

@@ -1,6 +1,5 @@
 package com.socialapp.postservice.dto.response;
 
-import java.time.LocalDate;
 import java.util.List;
 
 import lombok.*;
@@ -19,17 +18,8 @@ public class UserProfile {
     @Data
     public static class UserProfileOne {
         String id;
-
-            String userId;
-
-            String email;
-            String firstName;
-            String lastName;
-
-            String username;
-            String avatarUrl;
-            String gender;
-            LocalDate dob;
+        String username;
+        String avatarUrl;
     }
-    
 }
+
