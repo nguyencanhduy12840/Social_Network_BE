@@ -444,21 +444,21 @@ public class PostService {
         Page<Post> postsPage;
 
         // If requesting own posts, return all posts
-        if (currentUserId.equals(userId)) {
-            postsPage = postRepository.findByAuthorIdAndTypeOrderByCreatedAtDesc(userId, type, pageable);
+    if (currentUserId.equals(userId)) {
+        postsPage = postRepository.findByAuthorIdAndTypeAndGroupIdIsNullOrderByCreatedAtDesc(userId, type, pageable);
+    } else {
+        // Check if users are friends
+        Boolean isFriend = profileClient.isFriend(currentUserId, userId).getData();
+        if (Boolean.TRUE.equals(isFriend)) {
+            // Return PUBLIC and FRIENDS posts (excluding group posts)
+            postsPage = postRepository.findByAuthorIdAndTypeAndPrivacyInAndGroupIdIsNullOrderByCreatedAtDesc(
+                    userId, type, List.of("PUBLIC", "FRIENDS"), pageable);
         } else {
-            // Check if users are friends
-            Boolean isFriend = profileClient.isFriend(currentUserId, userId).getData();
-            if (Boolean.TRUE.equals(isFriend)) {
-                // Return PUBLIC and FRIENDS posts
-                postsPage = postRepository.findByAuthorIdAndTypeAndPrivacyInOrderByCreatedAtDesc(
-                        userId, type, List.of("PUBLIC", "FRIENDS"), pageable);
-            } else {
-                // Return only PUBLIC posts
-                postsPage = postRepository.findByAuthorIdAndTypeAndPrivacyInOrderByCreatedAtDesc(
-                        userId, type, List.of("PUBLIC"), pageable);
-            }
+            // Return only PUBLIC posts (excluding group posts)
+            postsPage = postRepository.findByAuthorIdAndTypeAndPrivacyInAndGroupIdIsNullOrderByCreatedAtDesc(
+                    userId, type, List.of("PUBLIC"), pageable);
         }
+    }
 
         // Convert posts to response
         List<PostResponse> postResponses = new ArrayList<>();

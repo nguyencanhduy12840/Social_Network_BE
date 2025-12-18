@@ -41,4 +41,8 @@ public interface PostRepository extends MongoRepository<Post, String>, CustomPos
     Page<Post> findByAuthorIdAndTypeOrderByCreatedAtDesc(String authorId, String type, Pageable pageable);
 
     Page<Post> findByAuthorIdAndTypeAndPrivacyInOrderByCreatedAtDesc(String authorId, String type, Collection<String> privacies, Pageable pageable);
+
+    Page<Post> findByAuthorIdAndTypeAndGroupIdIsNullOrderByCreatedAtDesc(String authorId, String type, Pageable pageable);
+
+    Page<Post> findByAuthorIdAndTypeAndPrivacyInAndGroupIdIsNullOrderByCreatedAtDesc(String authorId, String type, Collection<String> privacies, Pageable pageable);
 }

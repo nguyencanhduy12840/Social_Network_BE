@@ -41,10 +41,19 @@ public class CustomPostRepositoryImpl implements CustomPostRepository {
             )
         );
 
-        // Kết hợp type và privacy criteria
-        Criteria finalCriteria = type != null ? 
-            new Criteria().andOperator(typeCriteria, privacyCriteria) : 
-            privacyCriteria;
+        // Lọc bỏ group posts (groupId phải là null)
+        Criteria notGroupPostCriteria = new Criteria().orOperator(
+            Criteria.where("groupId").isNull(),
+            Criteria.where("groupId").exists(false)
+        );
+
+        // Kết hợp type, privacy, và not-group criteria
+        Criteria finalCriteria;
+        if (type != null) {
+            finalCriteria = new Criteria().andOperator(typeCriteria, privacyCriteria, notGroupPostCriteria);
+        } else {
+            finalCriteria = new Criteria().andOperator(privacyCriteria, notGroupPostCriteria);
+        }
 
         // Query với pagination và sorting
         Query query = new Query(finalCriteria)
