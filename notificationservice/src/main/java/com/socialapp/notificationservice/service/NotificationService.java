@@ -234,8 +234,6 @@ public class NotificationService {
                 return "Someone sent you a friend request";
             case "FRIEND_REQUEST_ACCEPTED":
                 return "Someone accepted your friend request";
-            case "FRIEND_REQUEST_REMOVED":
-                return "Someone removed you from friends";
             case "GROUP_INVITE":
                 return "Someone invited you to a group";
             case "GROUP_JOIN_REQUEST":
