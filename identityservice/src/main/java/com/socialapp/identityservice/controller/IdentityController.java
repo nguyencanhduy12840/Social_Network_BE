@@ -12,6 +12,7 @@ import com.socialapp.identityservice.dto.response.ValidateResponse;
 import com.socialapp.identityservice.entity.Identity;
 import com.socialapp.identityservice.exception.ExistException;
 import com.socialapp.identityservice.exception.GoogleAuthException;
+import com.socialapp.identityservice.service.EmailService;
 import com.socialapp.identityservice.service.GoogleAuthService;
 import com.socialapp.identityservice.service.IdentityService;
 import com.socialapp.identityservice.util.ApiMessage;
@@ -40,13 +41,16 @@ public class IdentityController {
     private final PasswordEncoder passwordEncoder;
     private final SecurityUtil securityUtil;
     private final GoogleAuthService googleAuthService;
+    private final EmailService emailService;
 
     @Value("${social.jwt.refresh-token-validity-in-seconds}")
     private long refreshTokenExpiration;
     
     public IdentityController(IdentityService identityService, PasswordEncoder passwordEncoder,
                               AuthenticationManagerBuilder authenticationManagerBuilder, 
-                              SecurityUtil securityUtil, GoogleAuthService googleAuthService) {
+                              SecurityUtil securityUtil, GoogleAuthService googleAuthService,
+                              EmailService emailService) {
+        this.emailService = emailService;
         this.securityUtil = securityUtil;
         this.authenticationManagerBuilder = authenticationManagerBuilder;
         this.identityService = identityService;
@@ -184,4 +188,12 @@ public class IdentityController {
                 .header(HttpHeaders.SET_COOKIE, responseCookie.toString())
                 .body("Logout successful");
     }
+
+    @GetMapping("/forgot-password")
+    public ResponseEntity<String> forgotPassword(@RequestParam String email) {
+        this.emailService.sendPasswordFromTemplateSync(email, "Password Recovery", "forgotpassword");
+        return ResponseEntity.ok().body("Password recovery email sent");
+    }
+
+
 }
