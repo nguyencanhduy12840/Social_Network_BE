@@ -15,5 +15,4 @@ public class UserResponse {
     private String id;
     private String username;
     private String avatarUrl;
-    // private boolean isOnline;
 }

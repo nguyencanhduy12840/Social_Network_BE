@@ -8,9 +8,11 @@ import org.springframework.web.bind.annotation.*;
 @RestController
 public class InternalUserProfileController {
     private final UserProfileService userProfileService;
+    
     public InternalUserProfileController(UserProfileService userProfileService) {
         this.userProfileService = userProfileService;
     }
+    
     @PostMapping("/internal/users")
     UserProfileResponse createProfile(@RequestBody ProfileCreationRequest request){
         return userProfileService.createProfile(request);

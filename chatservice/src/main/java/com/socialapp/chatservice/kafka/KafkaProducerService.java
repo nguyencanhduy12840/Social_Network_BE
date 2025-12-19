@@ -14,7 +14,7 @@ public class KafkaProducerService {
     private final KafkaTemplate<String, Object> kafkaTemplate;
 
     private static final String CHAT_MESSAGE_TOPIC = "chat-messages";
-    private static final String CHAT_NOTIFICATION_TOPIC = "chat-notifications";
+    private static final String NOTIFICATION_EVENTS_TOPIC = "notification-events";
 
     /**
      * Gửi event tin nhắn mới vào Kafka
@@ -38,22 +38,23 @@ public class KafkaProducerService {
     }
 
     /**
-     * Gửi notification về tin nhắn mới
+     * Gửi notification tới NotificationService để xử lý in-app notification và push notification
      */
-    public void sendChatNotification(ChatMessageEvent event) {
+    public void sendMessageNotification(com.socialapp.chatservice.dto.event.BaseEvent baseEvent) {
         try {
-            log.info("Sending chat notification to Kafka: recipientId={}", event.getRecipientId());
+            log.info("Sending message notification event to NotificationService: eventType={}", 
+                    baseEvent.getEventType());
 
-            kafkaTemplate.send(CHAT_NOTIFICATION_TOPIC, event.getRecipientId(), event)
+            kafkaTemplate.send(NOTIFICATION_EVENTS_TOPIC, baseEvent)
                     .whenComplete((result, ex) -> {
                         if (ex == null) {
-                            log.info("Notification sent successfully to: {}", event.getRecipientId());
+                            log.info("Notification event sent successfully");
                         } else {
-                            log.error("Failed to send notification to Kafka: {}", ex.getMessage());
+                            log.error("Failed to send notification event: {}", ex.getMessage());
                         }
                     });
         } catch (Exception e) {
-            log.error("Error sending notification to Kafka: {}", e.getMessage(), e);
+            log.error("Error sending notification event: {}", e.getMessage(), e);
         }
     }
 }

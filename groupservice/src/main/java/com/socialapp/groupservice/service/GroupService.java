@@ -1,5 +1,6 @@
 package com.socialapp.groupservice.service;
 
+import com.socialapp.groupservice.client.PostClient;
 import com.socialapp.groupservice.client.ProfileClient;
 import com.socialapp.groupservice.dto.request.*;
 import com.socialapp.groupservice.dto.response.*;
@@ -35,16 +36,20 @@ public class GroupService {
     private final GroupJoinRequestRepository groupJoinRequestRepository;
     
     private final ProfileClient profileClient;
+    
+    private final PostClient postClient;
 
     public GroupService(GroupRepository groupRepository, GroupConverter groupConverter,
                         CloudinaryService cloudinaryService, GroupMemberRepository groupMemberRepository,
-            GroupJoinRequestRepository groupJoinRequestRepository, ProfileClient profileClient) {
+            GroupJoinRequestRepository groupJoinRequestRepository, ProfileClient profileClient,
+            PostClient postClient) {
         this.cloudinaryService = cloudinaryService;
         this.groupConverter = groupConverter;
         this.groupRepository = groupRepository;
         this.groupMemberRepository = groupMemberRepository;
         this.groupJoinRequestRepository = groupJoinRequestRepository;
         this.profileClient = profileClient;
+        this.postClient = postClient;
     }
     
      private UserResponse buildUserResponse(String userId) {
@@ -236,6 +241,13 @@ public class GroupService {
         // Tìm membership của người dùng
         GroupMember member = groupMemberRepository.findByGroupIdAndUserId(groupId, currentUserId)
                 .orElseThrow(() -> new RuntimeException("You are not a member of this group"));
+
+        // Xóa tất cả posts của member này trong group
+        try {
+            postClient.deletePostsByGroupIdAndAuthorId(groupId, currentUserId);
+        } catch (Exception e) {
+            System.err.println("Error deleting posts for member leaving group: " + e.getMessage());
+        }
 
         // Xóa tất cả join requests của user này cho group này (cleanup)
         List<GroupJoinRequest> userRequests = groupJoinRequestRepository
@@ -520,6 +532,13 @@ public class GroupService {
             // Admin can only remove Members
         }
 
+        // Xóa tất cả posts của member này trong group
+        try {
+            postClient.deletePostsByGroupIdAndAuthorId(groupId, memberId);
+        } catch (Exception e) {
+            System.err.println("Error deleting posts for removed member: " + e.getMessage());
+        }
+
         // Xóa tất cả join requests của member này cho group này (nếu có)
         List<GroupJoinRequest> pendingRequests = groupJoinRequestRepository
                 .findAllByGroupIdAndUserId(groupId, memberId);
@@ -546,6 +565,13 @@ public class GroupService {
         // Kiểm tra người dùng có phải là chủ nhóm không
         if (!group.getOwnerId().equals(currentUserId)) {
             throw new RuntimeException("Only the group owner can delete the group");
+        }
+
+        // Xóa tất cả posts trong group
+        try {
+            postClient.deletePostsByGroupId(groupId);
+        } catch (Exception e) {
+            System.err.println("Error deleting posts for deleted group: " + e.getMessage());
         }
 
         // Xóa tất cả members

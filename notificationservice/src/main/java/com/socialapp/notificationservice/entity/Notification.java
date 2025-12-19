@@ -36,5 +36,7 @@ public class Notification {
         private String postId;
         private String commentId;
         private String groupId;
+        private String chatId;
+        private String messageId;
     }
 }

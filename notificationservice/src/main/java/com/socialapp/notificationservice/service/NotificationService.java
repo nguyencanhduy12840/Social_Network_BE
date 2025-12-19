@@ -103,6 +103,29 @@ public class NotificationService {
         sendPushNotification(notification);
     }
 
+    public void handleChatEvent(BaseEvent event) {
+        ChatMessageEventDTO eventDTO = modelMapper.map(event.getPayload(), ChatMessageEventDTO.class);
+        Notification notification = Notification.builder()
+                .senderId(eventDTO.getSenderId())
+                .receiverId(eventDTO.getReceiverId())
+                .type(eventDTO.getEventType())
+                .extraData(Notification.ExtraData.builder()
+                        .chatId(eventDTO.getChatId())
+                        .messageId(eventDTO.getMessageId())
+                        .build())
+                .isRead(false)
+                .createdAt(Instant.now())
+                .build();
+
+        notificationRepository.save(notification);
+
+        // Push realtime via WebSocket
+        messagingTemplate.convertAndSend("/topic/notifications/" + eventDTO.getReceiverId(), notification);
+
+        // Send Push Notification
+        sendPushNotification(notification);
+    }
+
     // ==========================================
     // Push Notification Management
     // ==========================================
@@ -218,26 +241,16 @@ public class NotificationService {
                 return "Someone posted a new photo";
             case "LIKE_POST":
                 return "Someone liked your post";
-            case "SHARE_POST":
-                return "Someone shared your post";
-            case "MENTION_POST":
-                return "Someone mentioned you in a post";
             case "COMMENT_ON_POST":
                 return "Someone commented on your post";
             case "REPLY_COMMENT":
                 return "Someone replied to your comment";
             case "LIKE_COMMENT":
                 return "Someone liked your comment";
-            case "MENTION_COMMENT":
-                return "Someone mentioned you in a comment";
             case "FRIEND_REQUEST":
                 return "Someone sent you a friend request";
             case "FRIEND_REQUEST_ACCEPTED":
                 return "Someone accepted your friend request";
-            case "FRIEND_REQUEST_REMOVED":
-                return "Someone removed you from friends";
-            case "GROUP_INVITE":
-                return "Someone invited you to a group";
             case "GROUP_JOIN_REQUEST":
                 return "Someone requested to join your group";
             case "GROUP_JOIN_ACCEPTED":
@@ -246,6 +259,8 @@ public class NotificationService {
                 return "Your role in the group has changed";
             case "GROUP_NEW_POST":
                 return "Someone posted in the group";
+            case "NEW_MESSAGE":
+                return "You have a new message";
             default:
                 return "You have a new notification";
         }

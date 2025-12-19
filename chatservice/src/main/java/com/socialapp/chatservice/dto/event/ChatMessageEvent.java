@@ -14,22 +14,21 @@ import java.util.List;
 public class ChatMessageEvent implements Serializable {
     private static final long serialVersionUID = 1L;
 
-    private String messageId;
+    private EventType eventType;
     private String chatId;
+    private String messageId;
     private String senderId;
-    private String senderName;
-    private String senderAvatar;
-    private String recipientId; 
+    private String recipientId;
     private String content;
     private List<String> attachments;
     private Instant createdAt;
     private List<String> readBy;
-    private EventType eventType;
 
     public enum EventType {
+        TYPING,
+        USER_ONLINE,
+        USER_OFFLINE,
         NEW_MESSAGE,
-        MESSAGE_DELETED,
         MESSAGE_READ,
-        TYPING
     }
 }

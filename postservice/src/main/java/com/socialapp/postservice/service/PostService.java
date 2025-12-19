@@ -3,8 +3,8 @@ package com.socialapp.postservice.service;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
-
 
 import com.socialapp.postservice.dto.request.SeenPostRequest;
 import com.socialapp.postservice.dto.response.*;
@@ -40,8 +40,8 @@ public class PostService {
     private final String NOTIFICATION_TOPIC = "notification-events";
 
     public PostService(PostRepository postRepository, PostConverter postConverter,
-                       CloudinaryService cloudinaryService, KafkaTemplate<String, BaseEvent> kafkaTemplate,
-                       ProfileClient profileClient, GroupClient groupClient) {
+            CloudinaryService cloudinaryService, KafkaTemplate<String, BaseEvent> kafkaTemplate,
+            ProfileClient profileClient, GroupClient groupClient) {
         this.postRepository = postRepository;
         this.postConverter = postConverter;
         this.cloudinaryService = cloudinaryService;
@@ -50,11 +50,12 @@ public class PostService {
         this.groupClient = groupClient;
     }
 
-    public CreatePostResponse createPost(String userId, String content, String groupId, String privacy, String type, MultipartFile[] mediaFiles) {
+    public CreatePostResponse createPost(String userId, String content, String groupId, String privacy, String type,
+            MultipartFile[] mediaFiles) {
         List<String> mediaUrls = new ArrayList<>();
 
         if (mediaFiles != null && mediaFiles.length > 0) {
-                for (MultipartFile file : mediaFiles) {
+            for (MultipartFile file : mediaFiles) {
                 String fileType = file.getContentType();
                 String url;
 
@@ -69,10 +70,10 @@ public class PostService {
         }
 
         if (groupId != null && !groupId.isEmpty()) {
-             Boolean isMember = groupClient.isGroupMember(groupId, userId);
-             if (!Boolean.TRUE.equals(isMember)) {
-                 throw new RuntimeException("You are not a member of this group");
-             }
+            Boolean isMember = groupClient.isGroupMember(groupId, userId);
+            if (!Boolean.TRUE.equals(isMember)) {
+                throw new RuntimeException("You are not a member of this group");
+            }
         }
 
         Post post = Post.builder()
@@ -99,24 +100,24 @@ public class PostService {
 
                 if (groupMembers != null && !groupMembers.isEmpty()) {
                     groupMembers.parallelStream()
-                        .filter(member -> !member.getUserId().equals(userId)) // Không gửi cho chính tác giả
-                        .forEach(member -> {
-                            PostEvent event = PostEvent.builder()
-                                    .postId(savedPost.getId())
-                                    .authorId(userId)
-                                    .groupId(groupId)
-                                    .eventType("NEW_POST_IN_GROUP")
-                                    .receiverId(member.getUserId())
-                                    .build();
+                            .filter(member -> !member.getUserId().equals(userId)) // Không gửi cho chính tác giả
+                            .forEach(member -> {
+                                PostEvent event = PostEvent.builder()
+                                        .postId(savedPost.getId())
+                                        .authorId(userId)
+                                        .groupId(groupId)
+                                        .eventType("NEW_POST_IN_GROUP")
+                                        .receiverId(member.getUserId())
+                                        .build();
 
-                            BaseEvent baseEvent = BaseEvent.builder()
-                                    .eventType("NEW_POST_IN_GROUP")
-                                    .sourceService("PostService")
-                                    .payload(event)
-                                    .build();
+                                BaseEvent baseEvent = BaseEvent.builder()
+                                        .eventType("NEW_POST_IN_GROUP")
+                                        .sourceService("PostService")
+                                        .payload(event)
+                                        .build();
 
-                            kafkaTemplate.send(NOTIFICATION_TOPIC, baseEvent);
-                        });
+                                kafkaTemplate.send(NOTIFICATION_TOPIC, baseEvent);
+                            });
                 }
             } catch (Exception e) {
                 // Log lỗi nhưng không ảnh hưởng việc tạo post
@@ -133,7 +134,7 @@ public class PostService {
                                 .authorId(userId)
                                 .groupId("")
                                 .eventType("NEW_POST")
-                                .receiverId(friend.getUserId())
+                                .receiverId(friend.getId())
                                 .build();
 
                         BaseEvent baseEvent = BaseEvent.builder()
@@ -156,16 +157,40 @@ public class PostService {
 
     public Post handleLikePost(LikePostRequest likePostRequest) {
         Optional<Post> post = postRepository.findById(likePostRequest.getPostId());
-        if(post.isPresent()){
+        if (post.isPresent()) {
             Post existingPost = post.get();
             List<String> likes = existingPost.getLikes();
+            boolean isLiked = false;
+
             if (likes.contains(likePostRequest.getUserId())) {
                 likes.remove(likePostRequest.getUserId());
+                isLiked = true;
             } else {
                 likes.add(likePostRequest.getUserId());
             }
             existingPost.setLikes(likes);
-            return postRepository.save(existingPost);
+            Post savedPost = postRepository.save(existingPost);
+
+            // Gửi notification khi like (không gửi khi unlike)
+            if (!isLiked && !likePostRequest.getUserId().equals(savedPost.getAuthorId())) {
+                PostEvent postEvent = PostEvent.builder()
+                        .postId(savedPost.getId())
+                        .authorId(likePostRequest.getUserId())
+                        .groupId(savedPost.getGroupId() != null ? savedPost.getGroupId() : "")
+                        .eventType("LIKE_POST")
+                        .receiverId(savedPost.getAuthorId())
+                        .build();
+
+                BaseEvent baseEvent = BaseEvent.builder()
+                        .eventType("LIKE_POST")
+                        .sourceService("PostService")
+                        .payload(postEvent)
+                        .build();
+
+                kafkaTemplate.send(NOTIFICATION_TOPIC, baseEvent);
+            }
+
+            return savedPost;
         }
         return null;
     }
@@ -174,14 +199,14 @@ public class PostService {
         Optional<String> requestId = SecurityUtil.getCurrentUserLogin();
         if (requestId.isPresent() && requestId.get().equals(userId)) {
             return postRepository.findByAuthorId(userId);
-        } else if (requestId.isPresent() && !requestId.get().equals(userId)){
+        } else if (requestId.isPresent() && !requestId.get().equals(userId)) {
             Boolean isFriend = profileClient.isFriend(requestId.get(), userId).getData();
-            if(isFriend) {
+            if (isFriend) {
                 return postRepository.findByAuthorIdAndPrivacyIn(userId, List.of("PUBLIC", "FRIENDS"));
             } else {
                 return postRepository.findByAuthorIdAndPrivacyIn(userId, List.of("PUBLIC"));
             }
-        }else {
+        } else {
             throw new RuntimeException("Unauthorized access to posts");
         }
     }
@@ -190,8 +215,7 @@ public class PostService {
         Optional<String> requestId = SecurityUtil.getCurrentUserLogin();
         Pageable pageable = PageRequest.of(page, size,
                 org.springframework.data.domain.Sort.by(
-                        org.springframework.data.domain.Sort.Direction.DESC, "createdAt"
-                ));
+                        org.springframework.data.domain.Sort.Direction.DESC, "createdAt"));
 
         Page<Post> postsPage;
 
@@ -201,7 +225,7 @@ public class PostService {
             // Lấy danh sách bạn bè
             UserProfile friends = profileClient.getFriends(currentUserId);
             List<String> friendIds = friends.getData().stream()
-                    .map(UserProfile.UserProfileOne::getUserId)
+                    .map(UserProfile.UserProfileOne::getId)
                     .toList();
 
             // Sử dụng custom repository với MongoDB query - tối ưu hiệu năng
@@ -211,12 +235,38 @@ public class PostService {
             postsPage = postRepository.findByPrivacyAndTypeOrderByCreatedAtDesc("PUBLIC", type, pageable);
         }
 
-        // Convert posts to response
+        // Collect UNIQUE author IDs
+        List<String> uniqueAuthorIds = postsPage.getContent().stream()
+                .map(Post::getAuthorId)
+                .distinct()
+                .toList();
+
+        // Fetch profiles for UNIQUE IDs and cache in map
+        Map<String, UserProfile.UserProfileOne> profileCache = new java.util.HashMap<>();
+        for (String authorId : uniqueAuthorIds) {
+            try {
+                OneUserProfileResponse response = profileClient.getUserProfile(authorId);
+                if (response != null && response.getData() != null) {
+                    // Convert to simplified UserProfile.UserProfileOne
+                    UserProfile.UserProfileOne simpleProfile = new UserProfile.UserProfileOne();
+                    simpleProfile.setId(response.getData().getId());
+                    simpleProfile.setUsername(response.getData().getUsername());
+                    simpleProfile.setAvatarUrl(response.getData().getAvatarUrl());
+                    profileCache.put(authorId, simpleProfile);
+                }
+            } catch (Exception e) {
+                System.err.println("Error fetching profile for " + authorId + ": " + e.getMessage());
+            }
+        }
+
+        // Convert posts to response using cached profiles
         List<PostResponse> postResponses = new ArrayList<>();
         for (Post post : postsPage.getContent()) {
             PostResponse postResponse = postConverter.convertToPostResponse(post);
-            OneUserProfileResponse authorProfile = profileClient.getUserProfile(post.getAuthorId());
-            postResponse.setAuthorProfile(authorProfile.getData());
+            UserProfile.UserProfileOne profile = profileCache.get(post.getAuthorId());
+            if (profile != null) {
+                postResponse.setAuthorProfile(profile);
+            }
             postResponses.add(postResponse);
         }
 
@@ -232,7 +282,7 @@ public class PostService {
                 .build();
     }
 
-     public Post updatePost(String postId, String content, String privacy, MultipartFile[] mediaFiles) {
+    public Post updatePost(String postId, String content, String privacy, MultipartFile[] mediaFiles) {
         Post post = postRepository.findById(postId).orElse(null);
         if (post != null) {
             post.setContent(content);
@@ -258,9 +308,9 @@ public class PostService {
         } else {
             throw new RuntimeException("Post not found");
         }
-     }
+    }
 
-     public boolean deletePost(String postId) {
+    public boolean deletePost(String postId) {
         Post post = postRepository.findById(postId).orElse(null);
         if (post != null) {
             postRepository.delete(post);
@@ -268,58 +318,64 @@ public class PostService {
         } else {
             return false;
         }
-     }
+    }
 
-     public Post unlikePost(LikePostRequest unlikePostRequest) {
-         Optional<Post> post = postRepository.findById(unlikePostRequest.getPostId());
-         if (post.isPresent()) {
-             Post existingPost = post.get();
-             List<String> likes = existingPost.getLikes();
-             likes.remove(unlikePostRequest.getUserId());
-             existingPost.setLikes(likes);
-             return postRepository.save(existingPost);
-         }
-         return null;
-     }
+    public Post unlikePost(LikePostRequest unlikePostRequest) {
+        Optional<Post> post = postRepository.findById(unlikePostRequest.getPostId());
+        if (post.isPresent()) {
+            Post existingPost = post.get();
+            List<String> likes = existingPost.getLikes();
+            likes.remove(unlikePostRequest.getUserId());
+            existingPost.setLikes(likes);
+            return postRepository.save(existingPost);
+        }
+        return null;
+    }
 
-     public PostResponse getPostById(String postId){
+    public PostResponse getPostById(String postId) {
         Optional<Post> post = postRepository.findById(postId);
-        if(post.isPresent()){
+        if (post.isPresent()) {
             Post currentPost = post.get();
             PostResponse postResponse = postConverter.convertToPostResponse(currentPost);
             OneUserProfileResponse authorProfile = profileClient.getUserProfile(currentPost.getAuthorId());
-            postResponse.setAuthorProfile(authorProfile.getData());
+            if (authorProfile != null && authorProfile.getData() != null) {
+                UserProfile.UserProfileOne simpleProfile = new UserProfile.UserProfileOne();
+                simpleProfile.setId(authorProfile.getData().getId());
+                simpleProfile.setUsername(authorProfile.getData().getUsername());
+                simpleProfile.setAvatarUrl(authorProfile.getData().getAvatarUrl());
+                postResponse.setAuthorProfile(simpleProfile);
+            }
             return postResponse;
         }
         return null;
-     }
+    }
 
-     public List<OneUserProfileResponse.UserProfileOne> getUserLikePost(String postId){
+    public List<OneUserProfileResponse.UserProfileOne> getUserLikePost(String postId) {
         Optional<Post> post = postRepository.findById(postId);
-        if(post.isPresent()){
+        if (post.isPresent()) {
             Post currentPost = post.get();
             List<String> likeUserIds = currentPost.getLikes();
             List<OneUserProfileResponse.UserProfileOne> likeUsers = new ArrayList<>();
-            for(String userId : likeUserIds){
+            for (String userId : likeUserIds) {
                 OneUserProfileResponse authorProfile = profileClient.getUserProfile(userId);
                 likeUsers.add(authorProfile.getData());
             }
             return likeUsers;
         }
         return null;
-     }
+    }
 
-     public List<Post> markPostsAsSeen(SeenPostRequest seenPostRequest) {
+    public List<Post> markPostsAsSeen(SeenPostRequest seenPostRequest) {
         List<String> postIds = seenPostRequest.getPostIds();
         String viewerId = seenPostRequest.getViewerId();
-        
+
         if (postIds == null || postIds.isEmpty()) {
             return new ArrayList<>();
         }
-        
+
         List<Post> posts = postRepository.findAllById(postIds);
         List<Post> updatedPosts = new ArrayList<>();
-        
+
         for (Post post : posts) {
             List<String> seenBy = post.getSeenBy();
             if (!seenBy.contains(viewerId)) {
@@ -328,29 +384,29 @@ public class PostService {
                 updatedPosts.add(post);
             }
         }
-        
+
         if (!updatedPosts.isEmpty()) {
             return postRepository.saveAll(updatedPosts);
         }
-        
-        return updatedPosts;
-     }
 
-     public List<OneUserProfileResponse.UserProfileOne> getUsersWhoSeenPost(String postId) {
-         Optional<Post> post = postRepository.findById(postId);
-         if (post.isPresent()) {
-             Post currentPost = post.get();
-             List<String> seenUserIds = currentPost.getSeenBy();
-             List<OneUserProfileResponse.UserProfileOne> seenUsers = new ArrayList<>();
-             for (String userId : seenUserIds) {
-                 OneUserProfileResponse authorProfile = profileClient.getUserProfile(userId);
-                 seenUsers.add(authorProfile.getData());
-             }
-             return seenUsers;
-         }
-         return null;
-     }
-        
+        return updatedPosts;
+    }
+
+    public List<OneUserProfileResponse.UserProfileOne> getUsersWhoSeenPost(String postId) {
+        Optional<Post> post = postRepository.findById(postId);
+        if (post.isPresent()) {
+            Post currentPost = post.get();
+            List<String> seenUserIds = currentPost.getSeenBy();
+            List<OneUserProfileResponse.UserProfileOne> seenUsers = new ArrayList<>();
+            for (String userId : seenUserIds) {
+                OneUserProfileResponse authorProfile = profileClient.getUserProfile(userId);
+                seenUsers.add(authorProfile.getData());
+            }
+            return seenUsers;
+        }
+        return null;
+    }
+
     public PagedPostResponse getGroupPosts(String groupId, int page, int size) {
         String currentUserId = SecurityUtil.getCurrentUserLogin()
                 .orElseThrow(() -> new RuntimeException("User not authenticated"));
@@ -369,8 +425,7 @@ public class PostService {
 
         Pageable pageable = PageRequest.of(page, size,
                 org.springframework.data.domain.Sort.by(
-                        org.springframework.data.domain.Sort.Direction.DESC, "createdAt"
-                ));
+                        org.springframework.data.domain.Sort.Direction.DESC, "createdAt"));
 
         Page<Post> postsPage = postRepository.findAllByGroupIdOrderByCreatedAtDesc(groupId, pageable);
 
@@ -379,7 +434,13 @@ public class PostService {
         for (Post post : postsPage.getContent()) {
             PostResponse postResponse = postConverter.convertToPostResponse(post);
             OneUserProfileResponse authorProfile = profileClient.getUserProfile(post.getAuthorId());
-            postResponse.setAuthorProfile(authorProfile.getData());
+            if (authorProfile != null && authorProfile.getData() != null) {
+                UserProfile.UserProfileOne simpleProfile = new UserProfile.UserProfileOne();
+                simpleProfile.setId(authorProfile.getData().getId());
+                simpleProfile.setUsername(authorProfile.getData().getUsername());
+                simpleProfile.setAvatarUrl(authorProfile.getData().getAvatarUrl());
+                postResponse.setAuthorProfile(simpleProfile);
+            }
             postResponses.add(postResponse);
         }
 
@@ -406,17 +467,18 @@ public class PostService {
 
         // If requesting own posts, return all posts
         if (currentUserId.equals(userId)) {
-            postsPage = postRepository.findByAuthorIdAndTypeOrderByCreatedAtDesc(userId, type, pageable);
+            postsPage = postRepository.findByAuthorIdAndTypeAndGroupIdIsNullOrderByCreatedAtDesc(userId, type,
+                    pageable);
         } else {
             // Check if users are friends
             Boolean isFriend = profileClient.isFriend(currentUserId, userId).getData();
             if (Boolean.TRUE.equals(isFriend)) {
-                // Return PUBLIC and FRIENDS posts
-                postsPage = postRepository.findByAuthorIdAndTypeAndPrivacyInOrderByCreatedAtDesc(
+                // Return PUBLIC and FRIENDS posts (excluding group posts)
+                postsPage = postRepository.findByAuthorIdAndTypeAndPrivacyInAndGroupIdIsNullOrderByCreatedAtDesc(
                         userId, type, List.of("PUBLIC", "FRIENDS"), pageable);
             } else {
-                // Return only PUBLIC posts
-                postsPage = postRepository.findByAuthorIdAndTypeAndPrivacyInOrderByCreatedAtDesc(
+                // Return only PUBLIC posts (excluding group posts)
+                postsPage = postRepository.findByAuthorIdAndTypeAndPrivacyInAndGroupIdIsNullOrderByCreatedAtDesc(
                         userId, type, List.of("PUBLIC"), pageable);
             }
         }
@@ -426,7 +488,13 @@ public class PostService {
         for (Post post : postsPage.getContent()) {
             PostResponse postResponse = postConverter.convertToPostResponse(post);
             OneUserProfileResponse authorProfile = profileClient.getUserProfile(post.getAuthorId());
-            postResponse.setAuthorProfile(authorProfile.getData());
+            if (authorProfile != null && authorProfile.getData() != null) {
+                UserProfile.UserProfileOne simpleProfile = new UserProfile.UserProfileOne();
+                simpleProfile.setId(authorProfile.getData().getId());
+                simpleProfile.setUsername(authorProfile.getData().getUsername());
+                simpleProfile.setAvatarUrl(authorProfile.getData().getAvatarUrl());
+                postResponse.setAuthorProfile(simpleProfile);
+            }
             postResponses.add(postResponse);
         }
 
@@ -444,5 +512,16 @@ public class PostService {
     @Transactional(readOnly = true)
     public int countPostsByUserId(String userId) {
         return postRepository.countByAuthorId(userId);
+    }
+
+    // Methods for group operations
+    @Transactional
+    public void deletePostsByGroupId(String groupId) {
+        postRepository.deleteAllByGroupId(groupId);
+    }
+
+    @Transactional
+    public void deletePostsByGroupIdAndAuthorId(String groupId, String authorId) {
+        postRepository.deleteAllByGroupIdAndAuthorId(groupId, authorId);
     }
 }

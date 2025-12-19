@@ -55,7 +55,6 @@ public class WebSocketController {
             Principal principal) {
         try {
             String currentUserId = principal.getName();
-            // log.info("User {} is typing in chat {}", currentUserId, request.getChatId());
 
             // Tìm người nhận
             String recipientId = chatService.getOtherParticipantId(request.getChatId(), currentUserId);
@@ -65,11 +64,11 @@ public class WebSocketController {
 
             // Tạo event
             com.socialapp.chatservice.dto.event.ChatMessageEvent event = com.socialapp.chatservice.dto.event.ChatMessageEvent.builder()
-                    .chatId(request.getChatId())
-                    .senderId(currentUserId)
-                    .recipientId(recipientId)
-                    .content(request.isTyping() ? "TYPING_START" : "TYPING_STOP") // Dùng content để đánh dấu
                     .eventType(com.socialapp.chatservice.dto.event.ChatMessageEvent.EventType.TYPING)
+                    .chatId(request.getChatId())
+                    .senderId(currentUserId) 
+                    .recipientId(recipientId)
+                    .content(request.isTyping() ? "TYPING_START" : "TYPING_STOP")
                     .build();
 
             // Gửi qua Kafka -> Consumer -> WebSocket -> Client

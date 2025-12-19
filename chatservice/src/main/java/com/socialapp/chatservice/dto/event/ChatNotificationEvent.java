@@ -5,13 +5,16 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+
 @Data
 @Builder
-@AllArgsConstructor
 @NoArgsConstructor
-public class TypingEvent {
+@AllArgsConstructor
+public class ChatNotificationEvent {
+    private String messageId;
     private String chatId;
     private String senderId;
-    private String recipientId;
-    private boolean isTyping;
+    private String receiverId;
+    private String content;
+    private String eventType;
 }

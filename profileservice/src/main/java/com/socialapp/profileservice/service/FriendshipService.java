@@ -91,20 +91,6 @@ public class FriendshipService {
         userProfileRepository.deleteFriendshipBetween(
                 request.getUserId(), request.getFriendUserId());
 
-        FriendshipEventDTO event = FriendshipEventDTO.builder()
-                .type("FRIEND_REQUEST_REMOVED")
-                .senderId(request.getUserId())
-                .receiverId(request.getFriendUserId())
-                .message("Friend request removed between users")
-                .build();
-
-        BaseEvent wrapper = BaseEvent.builder()
-                .eventType("FRIEND_REQUEST_REMOVED")
-                .sourceService("ProfileService")
-                .payload(event)
-                .build();
-
-        kafkaTemplate.send(NOTIFICATION_TOPIC, wrapper);
         return "Friend request removed";
     }
 

@@ -17,6 +17,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 import java.util.List;
+import java.util.Set;
 
 @RestController
 public class ChatController {
@@ -132,16 +133,12 @@ public class ChatController {
         return ResponseEntity.ok("Xóa tin nhắn thành công");
     }
 
-    // @GetMapping("/unread-count")
-    // public ResponseEntity<Long> getUnreadCount() {
-    // String currentUserId = SecurityUtil.getCurrentUserLogin()
-    // .orElseThrow(() -> new RuntimeException("Bạn chưa đăng nhập"));
+    @GetMapping("/online")
+    public ResponseEntity<Set<String>> getOnlineUsers() {
+        String currentUserId = SecurityUtil.getCurrentUserLogin()
+                .orElseThrow(() -> new RuntimeException("Bạn chưa đăng nhập"));
 
-    // return ResponseEntity.ok(chatService.getGlobalUnreadCount(currentUserId));
-    // }
-
-    // @GetMapping("/users/{userId}/online")
-    // public ResponseEntity<Boolean> isUserOnline(@PathVariable String userId) {
-    // return ResponseEntity.ok(chatService.isUserOnline(userId));
-    // }
+        Set<String> onlineContacts = chatService.getOnlineUsers(currentUserId);
+        return ResponseEntity.ok(onlineContacts);
+    }
 }
