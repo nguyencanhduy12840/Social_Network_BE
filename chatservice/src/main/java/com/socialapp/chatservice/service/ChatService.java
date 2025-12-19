@@ -6,6 +6,7 @@ import com.socialapp.chatservice.dto.request.SendMessageRequest;
 import com.socialapp.chatservice.dto.response.ChatResponse;
 import com.socialapp.chatservice.dto.response.MessageResponse;
 import com.socialapp.chatservice.dto.response.OneUserProfileResponse;
+import com.socialapp.chatservice.dto.response.UserProfile;
 import com.socialapp.chatservice.dto.response.UserResponse;
 import com.socialapp.chatservice.entity.Chat;
 import com.socialapp.chatservice.entity.Message;
@@ -14,6 +15,7 @@ import com.socialapp.chatservice.repository.MessageRepository;
 import com.socialapp.chatservice.dto.event.ChatMessageEvent;
 import com.socialapp.chatservice.kafka.KafkaProducerService;
 import lombok.RequiredArgsConstructor;
+
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -39,9 +41,31 @@ public class ChatService {
         return onlineUserService.isUserOnline(userId);
     }
 
-    /**
-     * Tạo hoặc lấy conversation giữa 2 người
-     */
+    public Set<String> getOnlineUsers(String currentUserId) {
+        try {
+            // Lấy friend list từ profileservice
+            UserProfile response = profileClient.getFriends(currentUserId);
+
+            List<UserResponse> friends = response != null ? response.getData() : new ArrayList<>();
+
+            if (friends == null || friends.isEmpty()) {
+                return new HashSet<>();
+            }
+
+            // Extract friend IDs
+            Set<String> friendIds = new HashSet<>();
+            for (UserResponse friend : friends) {
+                friendIds.add(friend.getId());
+            }
+
+            // Filter chỉ lấy những friends đang online
+            Set<String> onlineFriends = onlineUserService.getOnlineUsers(friendIds);
+            return onlineFriends;
+        } catch (Exception e) {
+            return new HashSet<>();
+        }
+    }
+
     @Transactional
     public ChatResponse createOrGetChat(String currentUserId, CreateChatRequest request) {
         String recipientId = request.getRecipientId();
@@ -76,7 +100,8 @@ public class ChatService {
      * Gửi tin nhắn
      */
     @Transactional
-    public MessageResponse sendMessage(String currentUserId, SendMessageRequest request, List<org.springframework.web.multipart.MultipartFile> files) {
+    public MessageResponse sendMessage(String currentUserId, SendMessageRequest request,
+            List<org.springframework.web.multipart.MultipartFile> files) {
         // Kiểm tra chat có tồn tại không
         Chat chat = chatRepository.findById(request.getChatId())
                 .orElseThrow(() -> new RuntimeException("Chat không tồn tại"));
@@ -91,18 +116,19 @@ public class ChatService {
         // Xử lý file upload
         if (files != null && !files.isEmpty()) {
             for (org.springframework.web.multipart.MultipartFile file : files) {
-                if (file.isEmpty()) continue;
-                
+                if (file.isEmpty())
+                    continue;
+
                 String contentType = file.getContentType();
                 String url;
-                
+
                 if (contentType != null) {
                     if (contentType.startsWith("image/")) {
                         url = cloudinaryService.uploadImage(file);
                     } else if (contentType.startsWith("video/")) {
                         url = cloudinaryService.uploadVideo(file);
                     } else if (contentType.startsWith("audio/")) {
-                        url = cloudinaryService.uploadVideo(file); 
+                        url = cloudinaryService.uploadVideo(file);
                     } else {
                         url = cloudinaryService.uploadFile(file);
                     }
@@ -115,38 +141,39 @@ public class ChatService {
 
         // Tạo tin nhắn mới
         Message message = new Message(
-            request.getChatId(),
-            currentUserId,
-            request.getContent(),
-            attachments
-        );
+                request.getChatId(),
+                currentUserId,
+                request.getContent(),
+                attachments);
 
+        message.getReadBy().add(currentUserId);
         message = messageRepository.save(message);
 
         // Cập nhật thông tin tin nhắn cuối trong chat
         chat.setLastMessageId(message.getId());
-        
+
         String lastMessageContent = message.getContent();
         if (lastMessageContent == null || lastMessageContent.isEmpty()) {
             if (!attachments.isEmpty()) {
-                lastMessageContent = "Sent " + (attachments.size() > 1 ? attachments.size() + " attachments" : "an attachment");
+                lastMessageContent = "Sent "
+                        + (attachments.size() > 1 ? attachments.size() + " attachments" : "an attachment");
             } else {
-                 lastMessageContent = "Sent a message";
+                lastMessageContent = "Sent a message";
             }
         }
-        
+
         chat.setLastMessage(lastMessageContent);
         chat.setLastMessageTime(message.getCreatedAt());
         chat.setLastMessageSenderId(currentUserId);
         chat.setUpdatedAt(Instant.now());
-        chat.setReadBy(new ArrayList<>(Collections.singletonList(currentUserId))); 
-        
+        chat.setReadBy(new ArrayList<>(Collections.singletonList(currentUserId)));
+
         if (chat.getDeletedBy() != null) {
             chat.getDeletedBy().clear();
         } else {
             chat.setDeletedBy(new ArrayList<>());
         }
-        
+
         chatRepository.save(chat);
 
         // === KAFKA ===
@@ -168,7 +195,8 @@ public class ChatService {
             throw new RuntimeException("Bạn không có quyền xem tin nhắn trong chat này");
         }
 
-        // Lấy tin nhắn với phân trang, loại bỏ tin nhắn đã xóa soft và tin nhắn bị ẩn bởi người dùng hiện tại
+        // Lấy tin nhắn với phân trang, loại bỏ tin nhắn đã xóa soft và tin nhắn bị ẩn
+        // bởi người dùng hiện tại
         Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt"));
         Page<Message> messages = messageRepository.findByChatIdAndIsDeletedFalseAndDeletedByNotContains(
                 chatId, currentUserId, pageable);
@@ -181,17 +209,19 @@ public class ChatService {
      */
     public Page<ChatResponse> getChats(String currentUserId, int page, int size) {
         Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "updatedAt"));
-        Page<Chat> chats = chatRepository.findByParticipantsContainingAndDeletedByNotContaining(currentUserId, currentUserId, pageable);
+        Page<Chat> chats = chatRepository.findByParticipantsContainingAndDeletedByNotContaining(currentUserId,
+                currentUserId, pageable);
 
         // Filter out chats that are effectively empty (no last message visible)
         // Note: This modifies the page size potentially.
         List<ChatResponse> filteredChats = chats.stream()
-            .map(chat -> mapToChatResponse(chat, currentUserId))
-            .filter(chatResponse -> chatResponse.getLastMessageTime() != null) 
-            .toList();
+                .map(chat -> mapToChatResponse(chat, currentUserId))
+                .filter(chatResponse -> chatResponse.getLastMessageTime() != null)
+                .toList();
 
-        return new org.springframework.data.domain.PageImpl<>(filteredChats, pageable, chats.getTotalElements()); 
-        // Note: Total elements might be inaccurate if we filter, but it's hard to get accurate count without complex aggregation query. 
+        return new org.springframework.data.domain.PageImpl<>(filteredChats, pageable, chats.getTotalElements());
+        // Note: Total elements might be inaccurate if we filter, but it's hard to get
+        // accurate count without complex aggregation query.
         // User accepted this trade-off in plan.
     }
 
@@ -249,7 +279,7 @@ public class ChatService {
 
         // Check if user is in the chat
         Chat chat = chatRepository.findById(message.getChatId())
-                 .orElseThrow(() -> new RuntimeException("Chat không tồn tại"));
+                .orElseThrow(() -> new RuntimeException("Chat không tồn tại"));
 
         if (!chat.getParticipants().contains(currentUserId)) {
             throw new RuntimeException("Bạn không có quyền xóa tin nhắn trong chat này");
@@ -321,7 +351,7 @@ public class ChatService {
     public String getOtherParticipantId(String chatId, String currentUserId) {
         Chat chat = chatRepository.findById(chatId)
                 .orElseThrow(() -> new RuntimeException("Chat không tồn tại"));
-        
+
         return chat.getParticipants().stream()
                 .filter(id -> !id.equals(currentUserId))
                 .findFirst()
@@ -340,29 +370,26 @@ public class ChatService {
         // Lấy thông tin user từ profile service
         UserResponse otherParticipant = null;
         if (otherUserId != null) {
-            // boolean isOnline = onlineUserService.isUserOnline(otherUserId);
             try {
                 OneUserProfileResponse response = profileClient.getUserProfile(otherUserId);
                 if (response != null && response.getData() != null) {
-                     OneUserProfileResponse.UserProfileOne profile = response.getData();
-                     otherParticipant = UserResponse.builder()
+                    OneUserProfileResponse.UserProfileOne profile = response.getData();
+                    otherParticipant = UserResponse.builder()
                             .id(profile.getId())
                             .username(profile.getUsername())
                             .avatarUrl(profile.getAvatarUrl())
-                            // .isOnline(isOnline)
                             .build();
                 }
             } catch (Exception e) {
                 System.err.println("Error fetching user profile: " + e.getMessage());
             }
-            
+
             // Fallback nếu không lấy được thông tin
             if (otherParticipant == null) {
                 otherParticipant = UserResponse.builder()
                         .id(otherUserId)
                         .username("Unknown User")
                         .avatarUrl(null)
-                        // .isOnline(isOnline)
                         .build();
             }
         }
@@ -371,8 +398,10 @@ public class ChatService {
         long unreadCount = messageRepository.countUnreadMessages(chat.getId(), currentUserId);
 
         // Get visible last message for this user
-        Message lastMessage = messageRepository.findFirstByChatIdAndIsDeletedFalseAndDeletedByNotContainingOrderByCreatedAtDesc(chat.getId(), currentUserId);
-        
+        Message lastMessage = messageRepository
+                .findFirstByChatIdAndIsDeletedFalseAndDeletedByNotContainingOrderByCreatedAtDesc(chat.getId(),
+                        currentUserId);
+
         String lastMessageContent = null;
         Instant lastMessageTime = null;
         String lastMessageSenderId = null;
@@ -385,7 +414,9 @@ public class ChatService {
             if (content != null && !content.isEmpty()) {
                 lastMessageContent = content;
             } else if (lastMessage.getAttachments() != null && !lastMessage.getAttachments().isEmpty()) {
-                lastMessageContent = "Sent " + (lastMessage.getAttachments().size() > 1 ? lastMessage.getAttachments().size() + " attachments" : "an attachment");
+                lastMessageContent = "Sent " + (lastMessage.getAttachments().size() > 1
+                        ? lastMessage.getAttachments().size() + " attachments"
+                        : "an attachment");
             } else {
                 lastMessageContent = "Sent a message";
             }
@@ -425,16 +456,6 @@ public class ChatService {
      */
     private void sendMessageEventToKafka(Message message, Chat chat, String currentUserId) {
         try {
-            // Lấy thông tin người gửi
-            OneUserProfileResponse senderProfileResponse = profileClient.getUserProfile(currentUserId);
-            String senderName = "Unknown User";
-            String senderAvatar = null;
-            
-            if (senderProfileResponse != null && senderProfileResponse.getData() != null) {
-                senderName = senderProfileResponse.getData().getUsername();
-                senderAvatar = senderProfileResponse.getData().getAvatarUrl();
-            }
-
             // Tìm người nhận
             String recipientId = chat.getParticipants().stream()
                     .filter(id -> !id.equals(currentUserId))
@@ -463,8 +484,8 @@ public class ChatService {
                 String contentPreview = message.getContent();
                 if (contentPreview == null || contentPreview.isEmpty()) {
                     if (message.getAttachments() != null && !message.getAttachments().isEmpty()) {
-                        contentPreview = "Sent " + (message.getAttachments().size() > 1 
-                                ? message.getAttachments().size() + " attachments" 
+                        contentPreview = "Sent " + (message.getAttachments().size() > 1
+                                ? message.getAttachments().size() + " attachments"
                                 : "an attachment");
                     } else {
                         contentPreview = "Sent a message";
@@ -473,8 +494,8 @@ public class ChatService {
                     contentPreview = contentPreview.substring(0, 97) + "...";
                 }
 
-                com.socialapp.chatservice.dto.event.ChatNotificationEvent eventDTO = 
-                        com.socialapp.chatservice.dto.event.ChatNotificationEvent.builder()
+                com.socialapp.chatservice.dto.event.ChatNotificationEvent eventDTO = com.socialapp.chatservice.dto.event.ChatNotificationEvent
+                        .builder()
                         .messageId(message.getId())
                         .chatId(message.getChatId())
                         .senderId(currentUserId)
@@ -483,8 +504,8 @@ public class ChatService {
                         .eventType("NEW_MESSAGE")
                         .build();
 
-                com.socialapp.chatservice.dto.event.BaseEvent baseEvent = 
-                        com.socialapp.chatservice.dto.event.BaseEvent.builder()
+                com.socialapp.chatservice.dto.event.BaseEvent baseEvent = com.socialapp.chatservice.dto.event.BaseEvent
+                        .builder()
                         .eventType("NEW_MESSAGE")
                         .sourceService("ChatService")
                         .payload(eventDTO)
