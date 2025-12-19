@@ -55,7 +55,6 @@ public class WebSocketController {
             Principal principal) {
         try {
             String currentUserId = principal.getName();
-            // log.info("User {} is typing in chat {}", currentUserId, request.getChatId());
 
             // Tìm người nhận
             String recipientId = chatService.getOtherParticipantId(request.getChatId(), currentUserId);
@@ -67,7 +66,7 @@ public class WebSocketController {
             com.socialapp.chatservice.dto.event.ChatMessageEvent event = com.socialapp.chatservice.dto.event.ChatMessageEvent.builder()
                     .eventType(com.socialapp.chatservice.dto.event.ChatMessageEvent.EventType.TYPING)
                     .chatId(request.getChatId())
-                    .sender(com.socialapp.chatservice.dto.response.UserResponse.builder().id(currentUserId).build())
+                    .senderId(currentUserId) 
                     .recipientId(recipientId)
                     .content(request.isTyping() ? "TYPING_START" : "TYPING_STOP")
                     .build();

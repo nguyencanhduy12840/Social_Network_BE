@@ -441,18 +441,12 @@ public class ChatService {
                     .findFirst()
                     .orElse(null);
 
-            UserResponse senderUser = UserResponse.builder()
-                    .id(message.getSenderId())
-                    .username(senderName)
-                    .avatarUrl(senderAvatar)
-                    .build();
-
             // Gửi WebSocket event cho real-time chat updates
             ChatMessageEvent event = ChatMessageEvent.builder()
                     .eventType(ChatMessageEvent.EventType.NEW_MESSAGE)
                     .chatId(message.getChatId())
                     .messageId(message.getId())
-                    .sender(senderUser)
+                    .senderId(currentUserId)
                     .recipientId(recipientId)
                     .content(message.getContent())
                     .attachments(message.getAttachments())
@@ -518,7 +512,7 @@ public class ChatService {
                     .eventType(ChatMessageEvent.EventType.MESSAGE_READ)
                     .chatId(message.getChatId())
                     .messageId(message.getId())
-                    .sender(UserResponse.builder().id(readerId).build())
+                    .senderId(readerId)
                     .recipientId(otherUserId)
                     .readBy(message.getReadBy())
                     .build();

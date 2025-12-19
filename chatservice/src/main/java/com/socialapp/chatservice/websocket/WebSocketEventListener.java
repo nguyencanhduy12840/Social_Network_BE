@@ -68,7 +68,7 @@ public class WebSocketEventListener {
             for (String recipientId : recipientIds) {
                 ChatMessageEvent statusEvent = ChatMessageEvent.builder()
                         .eventType(eventType)
-                        .sender(com.socialapp.chatservice.dto.response.UserResponse.builder().id(userId).build())
+                        .senderId(userId)
                         .recipientId(recipientId)
                         .build();
                 

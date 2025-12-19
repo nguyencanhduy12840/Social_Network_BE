@@ -1,6 +1,5 @@
 package com.socialapp.chatservice.dto.event;
 
-import com.socialapp.chatservice.dto.response.UserResponse;
 import lombok.*;
 
 import java.io.Serializable;
@@ -18,7 +17,7 @@ public class ChatMessageEvent implements Serializable {
     private EventType eventType;
     private String chatId;
     private String messageId;
-    private UserResponse sender;
+    private String senderId;
     private String recipientId;
     private String content;
     private List<String> attachments;

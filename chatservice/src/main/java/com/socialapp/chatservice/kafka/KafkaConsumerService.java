@@ -45,8 +45,8 @@ public class KafkaConsumerService {
             }
 
             // Push message to sender (for multi-device sync)
-            if (event.getSender() != null && event.getSender().getId() != null) {
-                webSocketService.sendMessageToUser(event.getSender().getId(), event);
+            if (event.getSenderId() != null) {
+                webSocketService.sendMessageToUser(event.getSenderId(), event);
             }
 
         } catch (Exception e) {
