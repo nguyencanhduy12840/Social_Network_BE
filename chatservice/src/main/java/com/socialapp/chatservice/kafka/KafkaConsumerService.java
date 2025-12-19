@@ -1,7 +1,6 @@
 package com.socialapp.chatservice.kafka;
 
 import com.socialapp.chatservice.dto.event.ChatMessageEvent;
-import com.socialapp.chatservice.dto.event.NotificationEvent;
 import com.socialapp.chatservice.websocket.WebSocketService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -14,7 +13,6 @@ import org.springframework.stereotype.Service;
 public class KafkaConsumerService {
 
     private final WebSocketService webSocketService;
-    private final KafkaProducerService kafkaProducerService;
 
     /**
      * Lắng nghe tin nhắn từ Kafka và push qua WebSocket tới client
@@ -55,44 +53,4 @@ public class KafkaConsumerService {
             log.error("Failed to process chat event: {}", e.getMessage(), e);
         }
     }
-
-    /**
-     * Lắng nghe notification từ Kafka và forward tới NotificationService
-     * để xử lý in-app notification và push notification
-     */
-    @KafkaListener(topics = "chat-notifications", groupId = "chat-service-group")
-    public void consumeChatNotification(ChatMessageEvent event) {
-        try {
-            log.info("Processing notification: {} for recipient: {}", 
-                event.getEventType(), event.getRecipientId());
-
-            // Chỉ xử lý NEW_MESSAGE events
-            if (event.getEventType() != ChatMessageEvent.EventType.NEW_MESSAGE) {
-                return;
-            }
-
-            // Build notification payload
-            NotificationEvent.NotificationPayload payload = NotificationEvent.NotificationPayload.builder()
-                    .sender(event.getSender())
-                    .receiverId(event.getRecipientId())
-                    .chatId(event.getChatId())
-                    .messageId(event.getMessageId())
-                    .content(event.getContent())
-                    .build();
-
-            // Build notification event matching BaseEvent format
-            NotificationEvent notificationEvent = NotificationEvent.builder()
-                    .eventType("NEW_CHAT_MESSAGE")
-                    .sourceService("ChatService")
-                    .payload(payload)
-                    .build();
-
-            // Send to NotificationService
-            kafkaProducerService.sendToNotificationService(notificationEvent);
-
-        } catch (Exception e) {
-            log.error("Error processing notification from Kafka: {}", e.getMessage(), e);
-        }
-    }
 }
-

@@ -1,7 +1,6 @@
 package com.socialapp.chatservice.kafka;
 
 import com.socialapp.chatservice.dto.event.ChatMessageEvent;
-import com.socialapp.chatservice.dto.event.NotificationEvent;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.kafka.core.KafkaTemplate;
@@ -15,8 +14,7 @@ public class KafkaProducerService {
     private final KafkaTemplate<String, Object> kafkaTemplate;
 
     private static final String CHAT_MESSAGE_TOPIC = "chat-messages";
-    private static final String CHAT_NOTIFICATION_TOPIC = "chat-notifications";
-    private static final String NOTIFICATION_EVENTS_TOPIC = "notification-events"; // Topic của NotificationService
+    private static final String NOTIFICATION_EVENTS_TOPIC = "notification-events";
 
     /**
      * Gửi event tin nhắn mới vào Kafka
@@ -40,43 +38,23 @@ public class KafkaProducerService {
     }
 
     /**
-     * Gửi notification về tin nhắn mới (internal topic)
-     */
-    public void sendChatNotification(ChatMessageEvent event) {
-        try {
-            log.info("Sending chat notification to Kafka: recipientId={}", event.getRecipientId());
-
-            kafkaTemplate.send(CHAT_NOTIFICATION_TOPIC, event.getRecipientId(), event)
-                    .whenComplete((result, ex) -> {
-                        if (ex == null) {
-                            log.info("Notification sent successfully to: {}", event.getRecipientId());
-                        } else {
-                            log.error("Failed to send notification to Kafka: {}", ex.getMessage());
-                        }
-                    });
-        } catch (Exception e) {
-            log.error("Error sending notification to Kafka: {}", e.getMessage(), e);
-        }
-    }
-
-    /**
      * Gửi notification tới NotificationService để xử lý in-app notification và push notification
      */
-    public void sendToNotificationService(NotificationEvent event) {
+    public void sendMessageNotification(com.socialapp.chatservice.dto.event.BaseEvent baseEvent) {
         try {
-            log.info("Sending notification to NotificationService: receiverId={}", 
-                    event.getPayload() != null ? event.getPayload().getReceiverId() : "null");
+            log.info("Sending message notification event to NotificationService: eventType={}", 
+                    baseEvent.getEventType());
 
-            kafkaTemplate.send(NOTIFICATION_EVENTS_TOPIC, event)
+            kafkaTemplate.send(NOTIFICATION_EVENTS_TOPIC, baseEvent)
                     .whenComplete((result, ex) -> {
                         if (ex == null) {
-                            log.info("Notification sent to NotificationService successfully");
+                            log.info("Notification event sent successfully");
                         } else {
-                            log.error("Failed to send to NotificationService: {}", ex.getMessage());
+                            log.error("Failed to send notification event: {}", ex.getMessage());
                         }
                     });
         } catch (Exception e) {
-            log.error("Error sending to NotificationService: {}", e.getMessage(), e);
+            log.error("Error sending notification event: {}", e.getMessage(), e);
         }
     }
 }

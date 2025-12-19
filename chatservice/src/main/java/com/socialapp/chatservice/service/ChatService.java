@@ -447,6 +447,7 @@ public class ChatService {
                     .avatarUrl(senderAvatar)
                     .build();
 
+            // Gửi WebSocket event cho real-time chat updates
             ChatMessageEvent event = ChatMessageEvent.builder()
                     .eventType(ChatMessageEvent.EventType.NEW_MESSAGE)
                     .chatId(message.getChatId())
@@ -462,9 +463,40 @@ public class ChatService {
             // Gửi qua Kafka
             kafkaProducerService.sendChatMessage(event);
 
-            // Gửi notification
-            if (recipientId != null) {
-                kafkaProducerService.sendChatNotification(event);
+            // Gửi notification event
+            if (recipientId != null && !currentUserId.equals(recipientId)) {
+                // Prepare content preview for notification
+                String contentPreview = message.getContent();
+                if (contentPreview == null || contentPreview.isEmpty()) {
+                    if (message.getAttachments() != null && !message.getAttachments().isEmpty()) {
+                        contentPreview = "Sent " + (message.getAttachments().size() > 1 
+                                ? message.getAttachments().size() + " attachments" 
+                                : "an attachment");
+                    } else {
+                        contentPreview = "Sent a message";
+                    }
+                } else if (contentPreview.length() > 100) {
+                    contentPreview = contentPreview.substring(0, 97) + "...";
+                }
+
+                com.socialapp.chatservice.dto.event.ChatNotificationEvent eventDTO = 
+                        com.socialapp.chatservice.dto.event.ChatNotificationEvent.builder()
+                        .messageId(message.getId())
+                        .chatId(message.getChatId())
+                        .senderId(currentUserId)
+                        .receiverId(recipientId)
+                        .content(contentPreview)
+                        .eventType("NEW_MESSAGE")
+                        .build();
+
+                com.socialapp.chatservice.dto.event.BaseEvent baseEvent = 
+                        com.socialapp.chatservice.dto.event.BaseEvent.builder()
+                        .eventType("NEW_MESSAGE")
+                        .sourceService("ChatService")
+                        .payload(eventDTO)
+                        .build();
+
+                kafkaProducerService.sendMessageNotification(baseEvent);
             }
 
         } catch (Exception e) {
