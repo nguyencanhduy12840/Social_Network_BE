@@ -2,14 +2,17 @@ package com.socialapp.identityservice.service;
 
 import com.socialapp.identityservice.dto.request.ProfileCreationRequest;
 import com.socialapp.identityservice.dto.request.ReqRegisterDTO;
+import com.socialapp.identityservice.dto.request.ResetPasswordRequest;
 import com.socialapp.identityservice.dto.response.ResRegisterDTO;
 import com.socialapp.identityservice.entity.Identity;
 import com.socialapp.identityservice.mapper.IdentityConverter;
 import com.socialapp.identityservice.repository.IdentityRepository;
 import com.socialapp.identityservice.repository.httpclient.ProfileClient;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
+import java.util.Random;
 
 @Service
 public class IdentityService {
@@ -17,8 +20,10 @@ public class IdentityService {
     private final IdentityConverter identityConverter;
     private final IdentityRepository identityRepository;
     private final ProfileClient profileClient;
+    private final PasswordEncoder passwordEncoder;
     public IdentityService(IdentityRepository identityRepository,
-                           IdentityConverter identityConverter, ProfileClient profileClient) {
+                           IdentityConverter identityConverter, ProfileClient profileClient, PasswordEncoder passwordEncoder) {
+        this.passwordEncoder = passwordEncoder;
         this.identityRepository = identityRepository;
         this.identityConverter = identityConverter;
         this.profileClient = profileClient;
@@ -116,4 +121,37 @@ public class IdentityService {
     public Identity findById(String id) {
         return identityRepository.findById(id).orElse(null);
     }
+
+    public String forgotPassword(String email) {
+        Identity identity = this.identityRepository.findByEmail(email);
+        if(identity != null){
+            String newPassword = randomPassword();
+            String hashedPassword = passwordEncoder.encode(newPassword);
+            identity.setPassword(hashedPassword);
+            this.identityRepository.save(identity);
+            return newPassword;
+        }
+        return null;
+    }
+
+    public String randomPassword(){
+        Random random = new Random();
+        StringBuilder result = new StringBuilder();
+        for (int i = 0; i < 6; i++) {
+            int digit = random.nextInt(10);
+            result.append(digit);
+        }
+        return result.toString();
+    }
+
+    public Identity changePassword(ResetPasswordRequest resetPasswordRequest) {
+        Identity identity = this.findIdentityByEmail(resetPasswordRequest.getEmail());
+        if(!this.passwordEncoder.matches(resetPasswordRequest.getCurrentPassword(), identity.getPassword())){
+            return null;
+        }
+        String hashedPassword = passwordEncoder.encode(resetPasswordRequest.getNewPassword());
+        identity.setPassword(hashedPassword);
+        return this.identityRepository.save(identity);
+    }
 }
+
