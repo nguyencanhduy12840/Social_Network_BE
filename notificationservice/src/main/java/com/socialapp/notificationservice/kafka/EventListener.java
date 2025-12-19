@@ -24,6 +24,7 @@ public class EventListener {
         case "PostService" -> notificationService.handlePostEvent(baseEvent);
         case "CommentService" -> notificationService.handleCommentEvent(baseEvent);
         case "ChatService" -> notificationService.handleChatEvent(baseEvent);
+        case "GroupService" -> notificationService.handleGroupEvent(baseEvent);
         default -> log.warn("Unknown source: {}", baseEvent.getSourceService());
     }
 }

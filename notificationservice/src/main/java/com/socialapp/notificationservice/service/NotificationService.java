@@ -1,5 +1,6 @@
 package com.socialapp.notificationservice.service;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.socialapp.notificationservice.dto.*;
 import com.socialapp.notificationservice.entity.Notification;
 import com.socialapp.notificationservice.entity.NotificationSettings;
@@ -7,7 +8,6 @@ import com.socialapp.notificationservice.entity.PushToken;
 import com.socialapp.notificationservice.repository.NotificationRepository;
 import com.socialapp.notificationservice.repository.NotificationSettingsRepository;
 import com.socialapp.notificationservice.repository.PushTokenRepository;
-import org.modelmapper.ModelMapper;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
@@ -24,23 +24,23 @@ public class NotificationService {
     private final PushTokenRepository pushTokenRepository;
     private final NotificationSettingsRepository notificationSettingsRepository;
     private final SimpMessagingTemplate messagingTemplate;
-    private final ModelMapper modelMapper;
+    private final ObjectMapper objectMapper;
     private final RestTemplate restTemplate = new RestTemplate();
 
     public NotificationService(NotificationRepository notificationRepository,
                                PushTokenRepository pushTokenRepository,
                                NotificationSettingsRepository notificationSettingsRepository,
                                SimpMessagingTemplate messagingTemplate,
-                               ModelMapper modelMapper) {
+                               ObjectMapper objectMapper) {
         this.notificationRepository = notificationRepository;
         this.pushTokenRepository = pushTokenRepository;
         this.notificationSettingsRepository = notificationSettingsRepository;
         this.messagingTemplate = messagingTemplate;
-        this.modelMapper = modelMapper;
+        this.objectMapper = objectMapper;
     }
 
     public void handleFriendshipEvent(BaseEvent event) {
-        FriendshipEventDTO dto = modelMapper.map(event.getPayload(), FriendshipEventDTO.class);
+        FriendshipEventDTO dto = objectMapper.convertValue(event.getPayload(), FriendshipEventDTO.class);
         Notification notification = Notification.builder()
                 .senderId(dto.getSenderId())
                 .receiverId(dto.getReceiverId())
@@ -59,13 +59,14 @@ public class NotificationService {
     }
 
     public void handlePostEvent(BaseEvent event){
-        PostEventDTO eventDTO = modelMapper.map(event.getPayload(), PostEventDTO.class);
+        PostEventDTO eventDTO = objectMapper.convertValue(event.getPayload(), PostEventDTO.class);
         Notification notification = Notification.builder()
                 .senderId(eventDTO.getAuthorId())
                 .receiverId(eventDTO.getReceiverId())
                 .type(eventDTO.getEventType())
                 .extraData(Notification.ExtraData.builder()
                         .postId(eventDTO.getPostId())
+                        .storyId(eventDTO.getStoryId())
                         .groupId(eventDTO.getGroupId())
                         .build())
                 .isRead(false)
@@ -82,7 +83,7 @@ public class NotificationService {
     }
 
     public void handleCommentEvent(BaseEvent event){
-        CommentEventDTO eventDTO = modelMapper.map(event.getPayload(), CommentEventDTO.class);
+        CommentEventDTO eventDTO = objectMapper.convertValue(event.getPayload(), CommentEventDTO.class);
         Notification notification = Notification.builder()
                 .senderId(eventDTO.getAuthorId())
                 .receiverId(eventDTO.getReceiverId())
@@ -90,6 +91,7 @@ public class NotificationService {
                 .extraData(Notification.ExtraData.builder()
                         .commentId(eventDTO.getCommentId())
                         .postId(eventDTO.getPostId())
+                        .storyId(eventDTO.getStoryId())
                         .groupId(eventDTO.getGroupId())
                         .build())
                 .isRead(false)
@@ -104,7 +106,7 @@ public class NotificationService {
     }
 
     public void handleChatEvent(BaseEvent event) {
-        ChatMessageEventDTO eventDTO = modelMapper.map(event.getPayload(), ChatMessageEventDTO.class);
+        ChatMessageEventDTO eventDTO = objectMapper.convertValue(event.getPayload(), ChatMessageEventDTO.class);
         Notification notification = Notification.builder()
                 .senderId(eventDTO.getSenderId())
                 .receiverId(eventDTO.getReceiverId())
@@ -112,6 +114,28 @@ public class NotificationService {
                 .extraData(Notification.ExtraData.builder()
                         .chatId(eventDTO.getChatId())
                         .messageId(eventDTO.getMessageId())
+                        .build())
+                .isRead(false)
+                .createdAt(Instant.now())
+                .build();
+
+        notificationRepository.save(notification);
+
+        // Push realtime via WebSocket
+        messagingTemplate.convertAndSend("/topic/notifications/" + eventDTO.getReceiverId(), notification);
+
+        // Send Push Notification
+        sendPushNotification(notification);
+    }
+
+    public void handleGroupEvent(BaseEvent event) {
+        GroupEventDTO eventDTO = objectMapper.convertValue(event.getPayload(), GroupEventDTO.class);
+        Notification notification = Notification.builder()
+                .senderId(eventDTO.getSenderId())
+                .receiverId(eventDTO.getReceiverId())
+                .type(eventDTO.getType())
+                .extraData(Notification.ExtraData.builder()
+                        .groupId(eventDTO.getGroupId())
                         .build())
                 .isRead(false)
                 .createdAt(Instant.now())
@@ -239,10 +263,16 @@ public class NotificationService {
         switch (notification.getType()) {
             case "NEW_POST":
                 return "Someone posted a new photo";
+            case "NEW_STORY":
+                return "Someone posted a new story";
             case "LIKE_POST":
                 return "Someone liked your post";
+            case "LIKE_STORY":
+                return "Someone liked your story";
             case "COMMENT_ON_POST":
                 return "Someone commented on your post";
+            case "COMMENT_ON_STORY":
+                return "Someone commented on your story";
             case "REPLY_COMMENT":
                 return "Someone replied to your comment";
             case "LIKE_COMMENT":

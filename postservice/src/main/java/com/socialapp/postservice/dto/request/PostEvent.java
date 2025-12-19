@@ -11,6 +11,7 @@ import lombok.NoArgsConstructor;
 @Builder
 public class PostEvent {
     String postId;
+    String storyId;
     String authorId;
     String groupId;
     String eventType;

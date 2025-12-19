@@ -10,6 +10,7 @@ import lombok.*;
 public class CommentEvent {
     String commentId;
     String postId;
+    String storyId;
     String authorId;
     String groupId;
     String eventType;

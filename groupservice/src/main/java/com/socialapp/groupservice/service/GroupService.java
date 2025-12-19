@@ -15,6 +15,7 @@ import com.socialapp.groupservice.util.SecurityUtil;
 import com.socialapp.groupservice.util.constant.GroupPrivacy;
 import com.socialapp.groupservice.util.constant.GroupRole;
 import com.socialapp.groupservice.util.constant.JoinRequestStatus;
+import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
@@ -39,10 +40,14 @@ public class GroupService {
     
     private final PostClient postClient;
 
+    private final KafkaTemplate<String, BaseEvent> kafkaTemplate;
+
+    private static final String NOTIFICATION_TOPIC = "notification-events";
+
     public GroupService(GroupRepository groupRepository, GroupConverter groupConverter,
                         CloudinaryService cloudinaryService, GroupMemberRepository groupMemberRepository,
             GroupJoinRequestRepository groupJoinRequestRepository, ProfileClient profileClient,
-            PostClient postClient) {
+            PostClient postClient, KafkaTemplate<String, BaseEvent> kafkaTemplate) {
         this.cloudinaryService = cloudinaryService;
         this.groupConverter = groupConverter;
         this.groupRepository = groupRepository;
@@ -50,6 +55,7 @@ public class GroupService {
         this.groupJoinRequestRepository = groupJoinRequestRepository;
         this.profileClient = profileClient;
         this.postClient = postClient;
+        this.kafkaTemplate = kafkaTemplate;
     }
     
      private UserResponse buildUserResponse(String userId) {
@@ -213,6 +219,27 @@ public class GroupService {
 
         GroupJoinRequest savedRequest = groupJoinRequestRepository.save(joinRequest);
 
+        // Gửi notification cho owner của group
+        try {
+            GroupEventDTO eventDTO = GroupEventDTO.builder()
+                    .groupId(groupId)
+                    .groupName(group.getName())
+                    .senderId(currentUserId)
+                    .receiverId(group.getOwnerId())
+                    .type("GROUP_JOIN_REQUEST")
+                    .build();
+
+            BaseEvent baseEvent = BaseEvent.builder()
+                    .eventType("GROUP_JOIN_REQUEST")
+                    .sourceService("GroupService")
+                    .payload(eventDTO)
+                    .build();
+
+            kafkaTemplate.send(NOTIFICATION_TOPIC, baseEvent);
+        } catch (Exception e) {
+            System.err.println("Error sending GROUP_JOIN_REQUEST notification: " + e.getMessage());
+        }
+
         // Tạo response
         RequestResponse response = new RequestResponse();
         response.setId(savedRequest.getId());
@@ -320,6 +347,27 @@ public class GroupService {
             newMember.setRole(GroupRole.MEMBER); // Mặc định là MEMBER
 
             groupMemberRepository.save(newMember);
+
+            // Gửi notification cho người được duyệt
+            try {
+                GroupEventDTO eventDTO = GroupEventDTO.builder()
+                        .groupId(groupId)
+                        .groupName(group.getName())
+                        .senderId(currentUserId)
+                        .receiverId(joinRequest.getUserId())
+                        .type("GROUP_JOIN_ACCEPTED")
+                        .build();
+
+                BaseEvent baseEvent = BaseEvent.builder()
+                        .eventType("GROUP_JOIN_ACCEPTED")
+                        .sourceService("GroupService")
+                        .payload(eventDTO)
+                        .build();
+
+                kafkaTemplate.send(NOTIFICATION_TOPIC, baseEvent);
+            } catch (Exception e) {
+                System.err.println("Error sending GROUP_JOIN_ACCEPTED notification: " + e.getMessage());
+            }
         } else {
             // Reject
             joinRequest.setStatus(JoinRequestStatus.REJECTED);
@@ -427,6 +475,28 @@ public class GroupService {
         // Cập nhật role
         targetMember.setRole(newRole);
         GroupMember updatedMember = groupMemberRepository.save(targetMember);
+
+        // Gửi notification cho member được thay đổi role
+        try {
+            GroupEventDTO eventDTO = GroupEventDTO.builder()
+                    .groupId(groupId)
+                    .groupName(targetMember.getGroup().getName())
+                    .senderId(currentUserId)
+                    .receiverId(memberId)
+                    .type("GROUP_ROLE_CHANGE")
+                    .newRole(newRole.name())
+                    .build();
+
+            BaseEvent baseEvent = BaseEvent.builder()
+                    .eventType("GROUP_ROLE_CHANGE")
+                    .sourceService("GroupService")
+                    .payload(eventDTO)
+                    .build();
+
+            kafkaTemplate.send(NOTIFICATION_TOPIC, baseEvent);
+        } catch (Exception e) {
+            System.err.println("Error sending GROUP_ROLE_CHANGE notification: " + e.getMessage());
+        }
 
         MemberResponse response = new MemberResponse();
         response.setUser(buildUserResponse(updatedMember.getUserId()));

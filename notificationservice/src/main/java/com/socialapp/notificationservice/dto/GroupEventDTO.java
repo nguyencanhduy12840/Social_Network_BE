@@ -9,11 +9,11 @@ import lombok.Setter;
 @Setter
 @AllArgsConstructor
 @NoArgsConstructor
-public class PostEventDTO {
-    String postId;
-    String storyId;
-    String authorId;
+public class GroupEventDTO {
     String groupId;
-    String eventType;
+    String groupName;
+    String senderId;
     String receiverId;
+    String type;
+    String newRole;
 }

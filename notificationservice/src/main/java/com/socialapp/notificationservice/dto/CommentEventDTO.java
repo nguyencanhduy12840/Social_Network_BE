@@ -12,6 +12,7 @@ import lombok.Setter;
 public class CommentEventDTO {
     String commentId;
     String postId;
+    String storyId;
     String authorId;
     String groupId;
     String eventType;

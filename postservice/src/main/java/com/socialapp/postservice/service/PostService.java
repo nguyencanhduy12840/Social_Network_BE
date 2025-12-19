@@ -100,18 +100,18 @@ public class PostService {
 
                 if (groupMembers != null && !groupMembers.isEmpty()) {
                     groupMembers.parallelStream()
-                            .filter(member -> !member.getUserId().equals(userId)) // Không gửi cho chính tác giả
+                            .filter(member -> member.getUser() != null && !member.getUser().getId().equals(userId))
                             .forEach(member -> {
                                 PostEvent event = PostEvent.builder()
                                         .postId(savedPost.getId())
                                         .authorId(userId)
                                         .groupId(groupId)
-                                        .eventType("NEW_POST_IN_GROUP")
-                                        .receiverId(member.getUserId())
+                                        .eventType("GROUP_NEW_POST")
+                                        .receiverId(member.getUser().getId())
                                         .build();
 
                                 BaseEvent baseEvent = BaseEvent.builder()
-                                        .eventType("NEW_POST_IN_GROUP")
+                                        .eventType("GROUP_NEW_POST")
                                         .sourceService("PostService")
                                         .payload(event)
                                         .build();
@@ -128,17 +128,22 @@ public class PostService {
             try {
                 UserProfile friends = profileClient.getFriends(userId);
                 if (friends != null && friends.getData() != null) {
+                    // Determine event type based on post type
+                    boolean isStory = "STORY".equals(type);
+                    String eventType = isStory ? "NEW_STORY" : "NEW_POST";
+                    
                     friends.getData().parallelStream().forEach(friend -> {
                         PostEvent event = PostEvent.builder()
-                                .postId(savedPost.getId())
+                                .postId(isStory ? null : savedPost.getId())
+                                .storyId(isStory ? savedPost.getId() : null)
                                 .authorId(userId)
                                 .groupId("")
-                                .eventType("NEW_POST")
+                                .eventType(eventType)
                                 .receiverId(friend.getId())
                                 .build();
 
                         BaseEvent baseEvent = BaseEvent.builder()
-                                .eventType("NEW_POST")
+                                .eventType(eventType)
                                 .sourceService("PostService")
                                 .payload(event)
                                 .build();
@@ -173,16 +178,21 @@ public class PostService {
 
             // Gửi notification khi like (không gửi khi unlike)
             if (!isLiked && !likePostRequest.getUserId().equals(savedPost.getAuthorId())) {
+                // Determine event type based on post type
+                boolean isStory = "STORY".equals(savedPost.getType());
+                String likeEventType = isStory ? "LIKE_STORY" : "LIKE_POST";
+                
                 PostEvent postEvent = PostEvent.builder()
-                        .postId(savedPost.getId())
+                        .postId(isStory ? null : savedPost.getId())
+                        .storyId(isStory ? savedPost.getId() : null)
                         .authorId(likePostRequest.getUserId())
                         .groupId(savedPost.getGroupId() != null ? savedPost.getGroupId() : "")
-                        .eventType("LIKE_POST")
+                        .eventType(likeEventType)
                         .receiverId(savedPost.getAuthorId())
                         .build();
 
                 BaseEvent baseEvent = BaseEvent.builder()
-                        .eventType("LIKE_POST")
+                        .eventType(likeEventType)
                         .sourceService("PostService")
                         .payload(postEvent)
                         .build();

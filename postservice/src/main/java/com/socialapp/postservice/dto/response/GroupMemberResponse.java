@@ -2,17 +2,21 @@ package com.socialapp.postservice.dto.response;
 
 import lombok.*;
 
-import java.time.Instant;
-
 @Data
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
 public class GroupMemberResponse {
-    private String id;
-    private String userId;
-    private String groupId;
+    private UserInfo user;
     private String role;
-    private Instant joinedAt;
+
+    @Data
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class UserInfo {
+        private String id;
+        private String username;
+        private String avatarUrl;
+    }
 }
 

@@ -67,13 +67,16 @@ public class CommentService {
         newComment.setMedia(mediaUrls);
         Comment savedComment = commentRepository.save(newComment);
         if(savedComment.getParentCommentId() != null) {
-
-            if(!savedComment.getAuthorId().equals(savedComment.getParentCommentId())) {
+            // Lấy parent comment để lấy authorId
+            Comment parentComment = commentRepository.findById(savedComment.getParentCommentId())
+                    .orElse(null);
+            
+            if(parentComment != null && !savedComment.getAuthorId().equals(parentComment.getAuthorId())) {
                 CommentEvent commentEventToParent = CommentEvent.builder()
                         .commentId(savedComment.getId())
                         .postId(savedComment.getPostId())
                         .authorId(savedComment.getAuthorId())
-                        .receiverId(savedComment.getParentCommentId())
+                        .receiverId(parentComment.getAuthorId())
                         .groupId("")
                         .eventType("REPLY_COMMENT")
                         .build();
@@ -92,19 +95,24 @@ public class CommentService {
             PostResponse post = postService.getPostById(savedComment.getPostId());
 
             if(!savedComment.getAuthorId().equals(post.getAuthorProfile().getId())){
+                // Determine event type based on post type
+                boolean isStory = "STORY".equals(post.getType());
+                String commentEventType = isStory ? "COMMENT_ON_STORY" : "COMMENT_ON_POST";
+                
                 CommentEvent commentEventToPostOwner = CommentEvent.builder()
                         .commentId(savedComment.getId())
-                        .postId(savedComment.getPostId())
+                        .postId(isStory ? null : savedComment.getPostId())
+                        .storyId(isStory ? savedComment.getPostId() : null)
                         .authorId(savedComment.getAuthorId())
                         .receiverId(post.getAuthorProfile().getId())
                         .groupId("")
-                        .eventType("COMMENT_ON_POST")
+                        .eventType(commentEventType)
                         .build();
 
 
 
                 BaseEvent baseEventPostOwner = BaseEvent.builder()
-                        .eventType("COMMENT_ON_POST")
+                        .eventType(commentEventType)
                         .sourceService("CommentService")
                         .payload(commentEventToPostOwner).build();
 
@@ -119,17 +127,22 @@ public class CommentService {
             postRepository.save(tempPost);
 
             if(!savedComment.getAuthorId().equals(post.getAuthorProfile().getId())){
+                // Determine event type based on post type
+                boolean isStory = "STORY".equals(post.getType());
+                String commentEventType = isStory ? "COMMENT_ON_STORY" : "COMMENT_ON_POST";
+                
                 CommentEvent commentEventToPostOwner = CommentEvent.builder()
                         .commentId(savedComment.getId())
-                        .postId(savedComment.getPostId())
+                        .postId(isStory ? null : savedComment.getPostId())
+                        .storyId(isStory ? savedComment.getPostId() : null)
                         .authorId(savedComment.getAuthorId())
                         .receiverId(post.getAuthorProfile().getId())
                         .groupId("")
-                        .eventType("COMMENT_ON_POST")
+                        .eventType(commentEventType)
                         .build();
 
                 BaseEvent baseEvent = BaseEvent.builder()
-                        .eventType("COMMENT_ON_POST")
+                        .eventType(commentEventType)
                         .sourceService("CommentService")
                         .payload(commentEventToPostOwner).build();
 
