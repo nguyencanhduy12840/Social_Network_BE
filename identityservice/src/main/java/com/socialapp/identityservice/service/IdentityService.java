@@ -2,6 +2,7 @@ package com.socialapp.identityservice.service;
 
 import com.socialapp.identityservice.dto.request.ProfileCreationRequest;
 import com.socialapp.identityservice.dto.request.ReqRegisterDTO;
+import com.socialapp.identityservice.dto.request.ResetPasswordRequest;
 import com.socialapp.identityservice.dto.response.ResRegisterDTO;
 import com.socialapp.identityservice.entity.Identity;
 import com.socialapp.identityservice.mapper.IdentityConverter;
@@ -141,6 +142,16 @@ public class IdentityService {
             result.append(digit);
         }
         return result.toString();
+    }
+
+    public Identity changePassword(ResetPasswordRequest resetPasswordRequest) {
+        Identity identity = this.findIdentityByEmail(resetPasswordRequest.getEmail());
+        if(!this.passwordEncoder.matches(resetPasswordRequest.getCurrentPassword(), identity.getPassword())){
+            return null;
+        }
+        String hashedPassword = passwordEncoder.encode(resetPasswordRequest.getNewPassword());
+        identity.setPassword(hashedPassword);
+        return this.identityRepository.save(identity);
     }
 }
 

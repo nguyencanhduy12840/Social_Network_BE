@@ -1,11 +1,7 @@
 package com.socialapp.identityservice.controller;
 
 import com.google.api.client.googleapis.auth.oauth2.GoogleIdToken;
-import com.socialapp.identityservice.dto.request.GoogleLoginRequest;
-import com.socialapp.identityservice.dto.request.RefreshTokenRequest;
-import com.socialapp.identityservice.dto.request.ReqLoginDTO;
-import com.socialapp.identityservice.dto.request.ReqRegisterDTO;
-import com.socialapp.identityservice.dto.request.ValidateRequest;
+import com.socialapp.identityservice.dto.request.*;
 import com.socialapp.identityservice.dto.response.ResLoginDTO;
 import com.socialapp.identityservice.dto.response.ResRegisterDTO;
 import com.socialapp.identityservice.dto.response.ValidateResponse;
@@ -195,5 +191,10 @@ public class IdentityController {
         return ResponseEntity.ok().body("Password recovery email sent");
     }
 
+    @PutMapping("/reset-password")
+    public ResponseEntity<String> resetPassword(@RequestBody ResetPasswordRequest request) {
+        this.identityService.changePassword(request);
+        return ResponseEntity.ok().body("Password has been reset successfully");
+    }
 
 }
