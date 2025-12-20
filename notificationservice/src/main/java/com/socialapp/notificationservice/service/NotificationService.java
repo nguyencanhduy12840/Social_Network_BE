@@ -8,6 +8,9 @@ import com.socialapp.notificationservice.entity.PushToken;
 import com.socialapp.notificationservice.repository.NotificationRepository;
 import com.socialapp.notificationservice.repository.NotificationSettingsRepository;
 import com.socialapp.notificationservice.repository.PushTokenRepository;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
@@ -28,10 +31,10 @@ public class NotificationService {
     private final RestTemplate restTemplate = new RestTemplate();
 
     public NotificationService(NotificationRepository notificationRepository,
-                               PushTokenRepository pushTokenRepository,
-                               NotificationSettingsRepository notificationSettingsRepository,
-                               SimpMessagingTemplate messagingTemplate,
-                               ObjectMapper objectMapper) {
+            PushTokenRepository pushTokenRepository,
+            NotificationSettingsRepository notificationSettingsRepository,
+            SimpMessagingTemplate messagingTemplate,
+            ObjectMapper objectMapper) {
         this.notificationRepository = notificationRepository;
         this.pushTokenRepository = pushTokenRepository;
         this.notificationSettingsRepository = notificationSettingsRepository;
@@ -53,12 +56,12 @@ public class NotificationService {
 
         // Push realtime
         messagingTemplate.convertAndSend("/topic/notifications/" + dto.getReceiverId(), notification);
-        
+
         // Send Push Notification
         sendPushNotification(notification);
     }
 
-    public void handlePostEvent(BaseEvent event){
+    public void handlePostEvent(BaseEvent event) {
         PostEventDTO eventDTO = objectMapper.convertValue(event.getPayload(), PostEventDTO.class);
         Notification notification = Notification.builder()
                 .senderId(eventDTO.getAuthorId())
@@ -82,7 +85,7 @@ public class NotificationService {
         sendPushNotification(notification);
     }
 
-    public void handleCommentEvent(BaseEvent event){
+    public void handleCommentEvent(BaseEvent event) {
         CommentEventDTO eventDTO = objectMapper.convertValue(event.getPayload(), CommentEventDTO.class);
         Notification notification = Notification.builder()
                 .senderId(eventDTO.getAuthorId())
@@ -148,6 +151,56 @@ public class NotificationService {
 
         // Send Push Notification
         sendPushNotification(notification);
+    }
+
+    // ==========================================
+    // Notification Management APIs
+    // ==========================================
+
+    public List<Notification> getNotifications(String userId) {
+        return notificationRepository.findByReceiverIdAndTypeNotOrderByCreatedAtDesc(userId, "NEW_MESSAGE");
+    }
+
+    public Page<Notification> getNotifications(String userId, int page, int size) {
+        Pageable pageable = PageRequest.of(page, size);
+        return notificationRepository.findByReceiverIdAndTypeNotOrderByCreatedAtDesc(userId, "NEW_MESSAGE", pageable);
+    }
+
+    public long getUnreadCount(String userId) {
+        return notificationRepository.countByReceiverIdAndIsReadFalse(userId);
+    }
+
+    public void markAsRead(String notificationId, String userId) {
+        Notification notification = notificationRepository.findById(notificationId)
+                .orElseThrow(() -> new RuntimeException("Notification not found"));
+
+        // Security check: only owner can mark as read
+        if (!notification.getReceiverId().equals(userId)) {
+            throw new RuntimeException("Unauthorized: You can only mark your own notifications as read");
+        }
+
+        notification.setRead(true);
+        notificationRepository.save(notification);
+    }
+
+    public void markAllAsRead(String userId) {
+        List<Notification> unreadNotifications = notificationRepository.findByReceiverIdAndIsReadFalse(userId);
+        for (Notification notification : unreadNotifications) {
+            notification.setRead(true);
+        }
+        notificationRepository.saveAll(unreadNotifications);
+    }
+
+    public void deleteNotification(String notificationId, String userId) {
+        Notification notification = notificationRepository.findById(notificationId)
+                .orElseThrow(() -> new RuntimeException("Notification not found"));
+
+        // Security check: only owner can delete
+        if (!notification.getReceiverId().equals(userId)) {
+            throw new RuntimeException("Unauthorized: You can only delete your own notifications");
+        }
+
+        notificationRepository.delete(notification);
     }
 
     // ==========================================
@@ -222,7 +275,8 @@ public class NotificationService {
                 return;
             }
 
-            if (settings.getSettings() != null && Boolean.FALSE.equals(settings.getSettings().get(notification.getType()))) {
+            if (settings.getSettings() != null
+                    && Boolean.FALSE.equals(settings.getSettings().get(notification.getType()))) {
                 return;
             }
 
