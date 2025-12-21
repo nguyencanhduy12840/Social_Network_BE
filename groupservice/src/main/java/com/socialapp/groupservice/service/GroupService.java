@@ -35,9 +35,9 @@ public class GroupService {
     private final GroupMemberRepository groupMemberRepository;
 
     private final GroupJoinRequestRepository groupJoinRequestRepository;
-    
+
     private final ProfileClient profileClient;
-    
+
     private final PostClient postClient;
 
     private final KafkaTemplate<String, BaseEvent> kafkaTemplate;
@@ -45,7 +45,7 @@ public class GroupService {
     private static final String NOTIFICATION_TOPIC = "notification-events";
 
     public GroupService(GroupRepository groupRepository, GroupConverter groupConverter,
-                        CloudinaryService cloudinaryService, GroupMemberRepository groupMemberRepository,
+            CloudinaryService cloudinaryService, GroupMemberRepository groupMemberRepository,
             GroupJoinRequestRepository groupJoinRequestRepository, ProfileClient profileClient,
             PostClient postClient, KafkaTemplate<String, BaseEvent> kafkaTemplate) {
         this.cloudinaryService = cloudinaryService;
@@ -57,34 +57,32 @@ public class GroupService {
         this.postClient = postClient;
         this.kafkaTemplate = kafkaTemplate;
     }
-    
-     private UserResponse buildUserResponse(String userId) {
+
+    private UserResponse buildUserResponse(String userId) {
         try {
             OneUserProfileResponse response = profileClient.getUserProfile(userId);
             if (response != null && response.getData() != null) {
                 OneUserProfileResponse.UserProfileOne profile = response.getData();
                 return new UserResponse(
-                    profile.getId(),
-                    profile.getUsername(),
-                    profile.getAvatarUrl()
-                );
+                        profile.getId(),
+                        profile.getUsername(),
+                        profile.getAvatarUrl());
             }
         } catch (Exception e) {
             System.err.println("Error fetching profile for user " + userId + ": " + e.getMessage());
         }
         return new UserResponse(userId, "Unknown User", null);
     }
-    
+
     private GroupResponse buildGroupResponse(Group group) {
         Integer memberCount = groupMemberRepository.countMembersByGroupId(group.getId());
         return new GroupResponse(
-            group.getId(),
-            group.getName(),
-            group.getDescription(),
-            group.getAvatarUrl(),
-            memberCount != null ? memberCount : 0,
-            group.getPrivacy()
-        );
+                group.getId(),
+                group.getName(),
+                group.getDescription(),
+                group.getAvatarUrl(),
+                memberCount != null ? memberCount : 0,
+                group.getPrivacy());
     }
 
     @Transactional
@@ -99,13 +97,13 @@ public class GroupService {
         group.setName(request.getName());
         group.setDescription(request.getDescription());
         group.setPrivacy(request.getPrivacy());
-        
+
         // Upload background image
         if (background != null && !background.isEmpty()) {
             String imageUrl = cloudinaryService.uploadImage(background);
             group.setBackgroundUrl(imageUrl);
         }
-        
+
         // Upload avatar
         if (avatar != null && !avatar.isEmpty()) {
             String avatarUrl = cloudinaryService.uploadImage(avatar);
@@ -151,13 +149,13 @@ public class GroupService {
                 response.setJoinStatus(null);
             } else {
                 response.setRole(null);
-                 Optional<GroupJoinRequest> requestOpt = groupJoinRequestRepository
-                         .findByGroupIdAndUserIdAndStatus(groupId, currentUserId, JoinRequestStatus.PENDING);
-                 if (requestOpt.isPresent()) {
-                     response.setJoinStatus(JoinRequestStatus.PENDING);
-                 } else {
-                     response.setJoinStatus(null);
-                 }
+                Optional<GroupJoinRequest> requestOpt = groupJoinRequestRepository
+                        .findByGroupIdAndUserIdAndStatus(groupId, currentUserId, JoinRequestStatus.PENDING);
+                if (requestOpt.isPresent()) {
+                    response.setJoinStatus(JoinRequestStatus.PENDING);
+                } else {
+                    response.setJoinStatus(null);
+                }
             }
         } else {
             response.setRole(null);
@@ -174,7 +172,7 @@ public class GroupService {
                 .map(this::buildGroupResponse)
                 .toList();
     }
-    
+
     @Transactional
     public RequestResponse joinGroup(String groupId) {
         // Lấy userId từ SecurityContext
@@ -189,28 +187,29 @@ public class GroupService {
         if (groupMemberRepository.findByGroupIdAndUserId(groupId, currentUserId).isPresent()) {
             throw new RuntimeException("You are already a member of this group");
         }
-        
+
         // Check pending requests
-        if (groupJoinRequestRepository.findByGroupIdAndUserIdAndStatus(groupId, currentUserId, JoinRequestStatus.PENDING).isPresent()) {
-             throw new RuntimeException("You already have a pending join request for this group");
+        if (groupJoinRequestRepository
+                .findByGroupIdAndUserIdAndStatus(groupId, currentUserId, JoinRequestStatus.PENDING).isPresent()) {
+            throw new RuntimeException("You already have a pending join request for this group");
         }
 
         // Nếu Group là PUBLIC -> Join luôn
         if (group.getPrivacy() == GroupPrivacy.PUBLIC) {
-             GroupMember newMember = new GroupMember();
-             newMember.setGroup(group);
-             newMember.setUserId(currentUserId);
-             newMember.setRole(GroupRole.MEMBER);
-             GroupMember savedMember = groupMemberRepository.save(newMember);
-             
+            GroupMember newMember = new GroupMember();
+            newMember.setGroup(group);
+            newMember.setUserId(currentUserId);
+            newMember.setRole(GroupRole.MEMBER);
+            GroupMember savedMember = groupMemberRepository.save(newMember);
+
             RequestResponse response = new RequestResponse();
             response.setId(savedMember.getId());
             response.setUser(buildUserResponse(currentUserId));
             response.setGroup(buildGroupResponse(group));
             response.setStatus(JoinRequestStatus.APPROVED);
             return response;
-        } 
-        
+        }
+
         // Nếu Group là PRIVATE -> Tạo Join Request
         GroupJoinRequest joinRequest = new GroupJoinRequest();
         joinRequest.setGroup(group);
@@ -332,7 +331,8 @@ public class GroupService {
                 .orElse(false);
 
         if (!isOwner && !isAdmin) {
-            throw new RuntimeException("You don't have permission to handle join requests. Only owner or admin can approve/reject members.");
+            throw new RuntimeException(
+                    "You don't have permission to handle join requests. Only owner or admin can approve/reject members.");
         }
 
         // Xử lý request
@@ -442,11 +442,12 @@ public class GroupService {
         }
 
         // Strict Permission Logic:
-        // Owner can update anyone (except logic usually prevents changing self role if it leaves group ownerless, but here simpler).
+        // Owner can update anyone (except logic usually prevents changing self role if
+        // it leaves group ownerless, but here simpler).
         // Admin can ONLY update MEMBER. Target CANNOT be ADMIN or OWNER.
-        
+
         if (targetMember.getRole() == GroupRole.OWNER) {
-             throw new RuntimeException("Cannot change the role of the group owner");
+            throw new RuntimeException("Cannot change the role of the group owner");
         }
 
         if (isAdmin) {
@@ -454,16 +455,17 @@ public class GroupService {
                 throw new RuntimeException("Admins cannot update other Admins.");
             }
             // Admin can only interact with Members.
-            // Also ensure newRole is not upgrading to Owner/Admin? 
-            // "Admin có thể update role thành viên" -> Usually implies managing members within their rank?
+            // Also ensure newRole is not upgrading to Owner/Admin?
+            // "Admin có thể update role thành viên" -> Usually implies managing members
+            // within their rank?
             // If Admin promotes Member to Admin -> They become peers.
             // If Admin promotes Member to Owner -> Only Owner can transfer ownership.
-            
+
             if (newRole == GroupRole.OWNER) {
                 throw new RuntimeException("Only Owner can assign Owner role.");
             }
-            // Let's allow Admin to promote Member to Admin if business allows? 
-            // User said: "không thể delete và update nhau". 
+            // Let's allow Admin to promote Member to Admin if business allows?
+            // User said: "không thể delete và update nhau".
             // If target is Member, Admin can update.
         }
 
@@ -510,7 +512,7 @@ public class GroupService {
         // Lấy userId từ SecurityContext
         String currentUserId = SecurityUtil.getCurrentUserLogin()
                 .orElseThrow(() -> new RuntimeException("User not authenticated"));
-        
+
         // Tìm group theo ID
         Group group = groupRepository.findById(groupId)
                 .orElseThrow(() -> new RuntimeException("Group not found"));
@@ -526,7 +528,8 @@ public class GroupService {
         }
 
         // Lấy danh sách PENDING requests
-        List<GroupJoinRequest> requests = groupJoinRequestRepository.findAllByGroupIdAndStatus(groupId, JoinRequestStatus.PENDING);
+        List<GroupJoinRequest> requests = groupJoinRequestRepository.findAllByGroupIdAndStatus(groupId,
+                JoinRequestStatus.PENDING);
 
         // Convert sang response DTO
         return requests.stream()
@@ -564,7 +567,7 @@ public class GroupService {
                 })
                 .toList();
     }
-    
+
     @Transactional
     public String removeMember(String groupId, String memberId) {
         // Lấy userId từ SecurityContext
@@ -579,11 +582,11 @@ public class GroupService {
         boolean isAdmin = actor.getRole() == GroupRole.ADMIN;
 
         if (!isOwner && !isAdmin) {
-             throw new RuntimeException("You don't have permission to remove members.");
+            throw new RuntimeException("You don't have permission to remove members.");
         }
 
         GroupMember targetMember = groupMemberRepository.findByGroupIdAndUserId(groupId, memberId)
-                        .orElseThrow(() -> new RuntimeException("Member not found"));
+                .orElseThrow(() -> new RuntimeException("Member not found"));
 
         if (!targetMember.getGroup().getId().equals(groupId)) {
             throw new RuntimeException("Member does not belong to this group");
@@ -615,7 +618,7 @@ public class GroupService {
         if (!pendingRequests.isEmpty()) {
             groupJoinRequestRepository.deleteAll(pendingRequests);
         }
-        
+
         // Xóa member
         groupMemberRepository.delete(targetMember);
 
@@ -646,10 +649,10 @@ public class GroupService {
 
         // Xóa tất cả members
         groupMemberRepository.deleteAllByGroupId(groupId);
-        
+
         // Xóa tất cả join requests
         groupJoinRequestRepository.deleteAllByGroupId(groupId);
-        
+
         groupRepository.delete(group);
     }
 
@@ -678,8 +681,8 @@ public class GroupService {
             String newImageUrl = cloudinaryService.uploadImage(background);
             group.setBackgroundUrl(newImageUrl);
         }
-        
-         // Upload avatar mới nếu có
+
+        // Upload avatar mới nếu có
         if (avatar != null && !avatar.isEmpty()) {
             String newAvatarUrl = cloudinaryService.uploadImage(avatar);
             group.setAvatarUrl(newAvatarUrl);
@@ -690,7 +693,7 @@ public class GroupService {
 
         return groupConverter.toGroupResponse(updatedGroup);
     }
-    
+
     @Transactional(readOnly = true)
     public List<MemberResponse> getGroupMembersInternal(String groupId) {
         // Method này dùng cho internal call từ các service khác
@@ -716,7 +719,7 @@ public class GroupService {
                 .map(member -> buildGroupResponse(member.getGroup()))
                 .toList();
     }
-    
+
     @Transactional(readOnly = true)
     public boolean isGroupMember(String groupId, String userId) {
         return groupMemberRepository.findByGroupIdAndUserId(groupId, userId).isPresent();
@@ -728,9 +731,17 @@ public class GroupService {
                 .map(g -> g.getPrivacy().name())
                 .orElse(null);
     }
-    
+
     @Transactional(readOnly = true)
     public int getGroupCountByUserId(String userId) {
         return groupMemberRepository.findAllByUserId(userId).size();
+    }
+
+    public List<GroupResponse> searchGroups(String keyword) {
+        List<Group> groups = groupRepository.findByNameContainingIgnoreCase(keyword);
+
+        return groups.stream()
+                .map(this::buildGroupResponse)
+                .toList();
     }
 }

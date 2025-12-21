@@ -28,7 +28,9 @@ public class UserProfileService {
     private final PostClient postClient;
     private final CloudinaryService cloudinaryService;
 
-    public UserProfileService(UserProfileRepository userProfileRepository, UserProfileConverter userProfileMapper, FriendshipService friendshipService, CloudinaryService cloudinaryService, GroupClient groupClient, PostClient postClient) {
+    public UserProfileService(UserProfileRepository userProfileRepository, UserProfileConverter userProfileMapper,
+            FriendshipService friendshipService, CloudinaryService cloudinaryService, GroupClient groupClient,
+            PostClient postClient) {
         this.userProfileRepository = userProfileRepository;
         this.userProfileMapper = userProfileMapper;
         this.friendshipService = friendshipService;
@@ -45,14 +47,12 @@ public class UserProfileService {
     }
 
     public UserProfileResponse getProfile(String id) {
-        UserProfile userProfile =
-                userProfileRepository.findById(id)
-                        .orElseThrow(() -> new RuntimeException("Profile not found"));
+        UserProfile userProfile = userProfileRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Profile not found"));
 
         Optional<String> currentUserId = SecurityUtil.getCurrentUserLogin();
 
-        UserProfileResponse userProfileResponse =
-                userProfileMapper.toUserProfileResponse(userProfile);
+        UserProfileResponse userProfileResponse = userProfileMapper.toUserProfileResponse(userProfile);
 
         if (currentUserId.isPresent() && currentUserId.get().equals(id)) {
             userProfileResponse.setFriendStatus("SELF");
@@ -85,7 +85,6 @@ public class UserProfileService {
             userProfileResponse.setPostCount(0);
         }
 
-
         return userProfileResponse;
     }
 
@@ -99,41 +98,42 @@ public class UserProfileService {
 
         UserProfile current = userProfileRepository.findByUserId(currentId).orElse(null);
         UserProfile profile = userProfileRepository.findByUserId(profileId).orElse(null);
-        if (current == null || profile == null) return "NONE";
+        if (current == null || profile == null)
+            return "NONE";
 
         boolean outgoingPending = current.getSentFriendships().stream()
-            .anyMatch(f -> f.getFriend().getUserId().equals(profileId)
+                .anyMatch(f -> f.getFriend().getUserId().equals(profileId)
                         && f.getStatus() == FriendshipStatus.PENDING);
 
-        if (outgoingPending) return "OUTGOING_PENDING";
+        if (outgoingPending)
+            return "OUTGOING_PENDING";
 
         boolean incomingPending = current.getReceivedFriendships().stream()
-            .anyMatch(f -> f.getFriend().getUserId().equals(profileId)
+                .anyMatch(f -> f.getFriend().getUserId().equals(profileId)
                         && f.getStatus() == FriendshipStatus.PENDING);
 
-        if (incomingPending) return "INCOMING_PENDING";
+        if (incomingPending)
+            return "INCOMING_PENDING";
 
-        boolean isFriend = current.getSentFriendships().stream().anyMatch(f ->
-                        f.getFriend().getUserId().equals(profileId)
+        boolean isFriend = current.getSentFriendships().stream()
+                .anyMatch(f -> f.getFriend().getUserId().equals(profileId)
                         && f.getStatus() == FriendshipStatus.ACCEPTED)
-                        || current.getReceivedFriendships().stream().anyMatch(f ->
-                        f.getFriend().getUserId().equals(profileId)
+                || current.getReceivedFriendships().stream().anyMatch(f -> f.getFriend().getUserId().equals(profileId)
                         && f.getStatus() == FriendshipStatus.ACCEPTED);
 
-        if (isFriend) return "FRIEND";
+        if (isFriend)
+            return "FRIEND";
 
         return "NONE";
     }
 
     public UserProfileResponse getProfileById(String id) {
-        UserProfile userProfile =
-                userProfileRepository.findById(id)
-                        .orElseThrow(() -> new RuntimeException("Profile not found"));
+        UserProfile userProfile = userProfileRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Profile not found"));
 
         Optional<String> currentUserId = SecurityUtil.getCurrentUserLogin();
 
-        UserProfileResponse userProfileResponse =
-                userProfileMapper.toUserProfileResponse(userProfile);
+        UserProfileResponse userProfileResponse = userProfileMapper.toUserProfileResponse(userProfile);
 
         if (currentUserId.isPresent() && currentUserId.get().equals(id)) {
             userProfileResponse.setFriendStatus("SELF");
@@ -146,30 +146,29 @@ public class UserProfileService {
         return userProfileResponse;
     }
 
-    public UserProfile updateProfile(UpdateUserProfileRequest request, MultipartFile mediaFile){
-        UserProfile userProfile =
-                userProfileRepository.findByUserId(request.getUserId())
-                        .orElseThrow(() -> new RuntimeException("Profile not found"));
+    public UserProfile updateProfile(UpdateUserProfileRequest request, MultipartFile mediaFile) {
+        UserProfile userProfile = userProfileRepository.findByUserId(request.getUserId())
+                .orElseThrow(() -> new RuntimeException("Profile not found"));
 
-        String mediaUrls="";
-        if ( mediaFile!= null) {
+        String mediaUrls = "";
+        if (mediaFile != null) {
             String url = cloudinaryService.uploadImage(mediaFile);
             mediaUrls += url;
         }
 
-        if(request.getFirstName() != null){
+        if (request.getFirstName() != null) {
             userProfile.setFirstName(request.getFirstName());
         }
-        if(request.getLastName() != null){
+        if (request.getLastName() != null) {
             userProfile.setLastName(request.getLastName());
         }
-        if(request.getUsername() != null){
+        if (request.getUsername() != null) {
             userProfile.setUsername(request.getUsername());
         }
-        if(request.getBio() != null){
+        if (request.getBio() != null) {
             userProfile.setBio(request.getBio());
         }
-        if(request.getGender() != null){
+        if (request.getGender() != null) {
             userProfile.setGender(request.getGender());
         }
         if (request.getDob() != null) {
@@ -180,9 +179,8 @@ public class UserProfileService {
         return userProfileRepository.save(userProfile);
     }
 
-    public List<UserProfileResponse> searchUsersByUsername(String keyword, int page, int size) {
-        long skip = (long) page * size;
-        List<UserProfile> users = userProfileRepository.searchByUsername(keyword, skip, size);
+    public List<UserProfileResponse> searchUsersByUsername(String keyword) {
+        List<UserProfile> users = userProfileRepository.searchByUsername(keyword);
 
         Optional<String> currentUserId = SecurityUtil.getCurrentUserLogin();
         String currentId = currentUserId.orElse(null);

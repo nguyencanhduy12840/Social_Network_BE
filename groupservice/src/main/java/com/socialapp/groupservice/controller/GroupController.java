@@ -81,7 +81,7 @@ public class GroupController {
         List<RequestResponse> response = groupService.getMyPendingRequests();
         return ResponseEntity.ok(response);
     }
-    
+
     @GetMapping("/{groupId}/requests")
     public ResponseEntity<List<RequestResponse>> getGroupJoinRequests(@PathVariable String groupId) {
         List<RequestResponse> response = groupService.getGroupJoinRequests(groupId);
@@ -92,7 +92,7 @@ public class GroupController {
     public ResponseEntity<RequestResponse> handleJoinRequest(
             @RequestBody HandleJoinRequestRequest request) {
         RequestResponse response = groupService.handleJoinRequest(
-                request.getRequestId(), 
+                request.getRequestId(),
                 request.getApproved());
         return ResponseEntity.ok(response);
     }
@@ -112,7 +112,8 @@ public class GroupController {
     @PutMapping("/members")
     public ResponseEntity<MemberResponse> updateMemberRole(
             @RequestBody UpdateMemberRoleRequest request) {
-        MemberResponse response = groupService.updateMemberRole(request.getGroupId(), request.getMemberId(), request.getRole());
+        MemberResponse response = groupService.updateMemberRole(request.getGroupId(), request.getMemberId(),
+                request.getRole());
         return ResponseEntity.ok(response);
     }
 
@@ -122,5 +123,12 @@ public class GroupController {
             @PathVariable String groupId) {
         String response = groupService.removeMember(groupId, memberId);
         return ResponseEntity.ok(response);
+    }
+
+    @GetMapping("/search")
+    public ResponseEntity<List<GroupResponse>> searchGroups(
+            @RequestParam String keyword) {
+        List<GroupResponse> groups = groupService.searchGroups(keyword);
+        return ResponseEntity.ok(groups);
     }
 }

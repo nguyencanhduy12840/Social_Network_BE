@@ -39,22 +39,19 @@ public class UserProfileController {
         return ResponseEntity.ok(userProfileService.getAllProfiles());
     }
 
-    @PutMapping(value="/users", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @PutMapping(value = "/users", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     ResponseEntity<UserProfile> updateUserProfile(
             @RequestPart("profile") String profile,
             @RequestPart(value = "media", required = false) MultipartFile mediaFile) throws JsonProcessingException {
 
-        UpdateUserProfileRequest request =
-                mapper.readValue(profile, UpdateUserProfileRequest.class);
+        UpdateUserProfileRequest request = mapper.readValue(profile, UpdateUserProfileRequest.class);
 
         return ResponseEntity.ok(userProfileService.updateProfile(request, mediaFile));
     }
 
     @GetMapping("/users/search")
     ResponseEntity<List<UserProfileResponse>> searchUsers(
-            @RequestParam String keyword,
-            @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "20") int size) {
-        return ResponseEntity.ok(userProfileService.searchUsersByUsername(keyword, page, size));
+            @RequestParam String keyword) {
+        return ResponseEntity.ok(userProfileService.searchUsersByUsername(keyword));
     }
 }

@@ -26,7 +26,8 @@ public interface PostRepository extends MongoRepository<Post, String>, CustomPos
     // Thêm các phương thức với Pageable cho pagination
     Page<Post> findByPrivacyAndTypeOrderByCreatedAtDesc(String privacy, String type, Pageable pageable);
 
-    Page<Post> findByAuthorIdInAndPrivacyInOrderByCreatedAtDesc(List<String> authorIds, List<String> privacy, Pageable pageable);
+    Page<Post> findByAuthorIdInAndPrivacyInOrderByCreatedAtDesc(List<String> authorIds, List<String> privacy,
+            Pageable pageable);
 
     Page<Post> findByAuthorIdOrPrivacyOrderByCreatedAtDesc(String authorId, String privacy, Pageable pageable);
 
@@ -40,14 +41,21 @@ public interface PostRepository extends MongoRepository<Post, String>, CustomPos
 
     Page<Post> findByAuthorIdAndTypeOrderByCreatedAtDesc(String authorId, String type, Pageable pageable);
 
-    Page<Post> findByAuthorIdAndTypeAndPrivacyInOrderByCreatedAtDesc(String authorId, String type, Collection<String> privacies, Pageable pageable);
+    Page<Post> findByAuthorIdAndTypeAndPrivacyInOrderByCreatedAtDesc(String authorId, String type,
+            Collection<String> privacies, Pageable pageable);
 
-    Page<Post> findByAuthorIdAndTypeAndGroupIdIsNullOrderByCreatedAtDesc(String authorId, String type, Pageable pageable);
+    Page<Post> findByAuthorIdAndTypeAndGroupIdIsNullOrderByCreatedAtDesc(String authorId, String type,
+            Pageable pageable);
 
-    Page<Post> findByAuthorIdAndTypeAndPrivacyInAndGroupIdIsNullOrderByCreatedAtDesc(String authorId, String type, Collection<String> privacies, Pageable pageable);
+    Page<Post> findByAuthorIdAndTypeAndPrivacyInAndGroupIdIsNullOrderByCreatedAtDesc(String authorId, String type,
+            Collection<String> privacies, Pageable pageable);
 
     // Delete methods for group operations
     void deleteAllByGroupId(String groupId);
 
     void deleteAllByGroupIdAndAuthorId(String groupId, String authorId);
+
+    // Search posts by content (type POST, group null)
+    List<Post> findByTypeAndGroupIdIsNullAndContentContainingIgnoreCaseOrderByCreatedAtDesc(
+            String type, String content);
 }

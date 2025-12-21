@@ -131,7 +131,7 @@ public class PostService {
                     // Determine event type based on post type
                     boolean isStory = "STORY".equals(type);
                     String eventType = isStory ? "NEW_STORY" : "NEW_POST";
-                    
+
                     friends.getData().parallelStream().forEach(friend -> {
                         PostEvent event = PostEvent.builder()
                                 .postId(isStory ? null : savedPost.getId())
@@ -181,7 +181,7 @@ public class PostService {
                 // Determine event type based on post type
                 boolean isStory = "STORY".equals(savedPost.getType());
                 String likeEventType = isStory ? "LIKE_STORY" : "LIKE_POST";
-                
+
                 PostEvent postEvent = PostEvent.builder()
                         .postId(isStory ? null : savedPost.getId())
                         .storyId(isStory ? savedPost.getId() : null)
@@ -533,5 +533,48 @@ public class PostService {
     @Transactional
     public void deletePostsByGroupIdAndAuthorId(String groupId, String authorId) {
         postRepository.deleteAllByGroupIdAndAuthorId(groupId, authorId);
+    }
+
+    public List<PostResponse> searchPosts(String keyword) {
+        // Search posts with type POST, group null, and content contains keyword
+        List<Post> posts = postRepository
+                .findByTypeAndGroupIdIsNullAndContentContainingIgnoreCaseOrderByCreatedAtDesc(
+                        "POST", keyword);
+
+        // Collect UNIQUE author IDs
+        List<String> uniqueAuthorIds = posts.stream()
+                .map(Post::getAuthorId)
+                .distinct()
+                .toList();
+
+        // Fetch profiles for UNIQUE IDs and cache in map
+        Map<String, UserProfile.UserProfileOne> profileCache = new java.util.HashMap<>();
+        for (String authorId : uniqueAuthorIds) {
+            try {
+                OneUserProfileResponse response = profileClient.getUserProfile(authorId);
+                if (response != null && response.getData() != null) {
+                    UserProfile.UserProfileOne simpleProfile = new UserProfile.UserProfileOne();
+                    simpleProfile.setId(response.getData().getId());
+                    simpleProfile.setUsername(response.getData().getUsername());
+                    simpleProfile.setAvatarUrl(response.getData().getAvatarUrl());
+                    profileCache.put(authorId, simpleProfile);
+                }
+            } catch (Exception e) {
+                System.err.println("Error fetching profile for " + authorId + ": " + e.getMessage());
+            }
+        }
+
+        // Convert posts to response using cached profiles
+        List<PostResponse> postResponses = new ArrayList<>();
+        for (Post post : posts) {
+            PostResponse postResponse = postConverter.convertToPostResponse(post);
+            UserProfile.UserProfileOne profile = profileCache.get(post.getAuthorId());
+            if (profile != null) {
+                postResponse.setAuthorProfile(profile);
+            }
+            postResponses.add(postResponse);
+        }
+
+        return postResponses;
     }
 }

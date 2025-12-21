@@ -10,7 +10,6 @@ import org.springframework.web.bind.annotation.*;
 
 import org.springframework.web.multipart.MultipartFile;
 
-
 import com.socialapp.postservice.dto.request.LikePostRequest;
 import com.socialapp.postservice.dto.response.CreatePostResponse;
 import com.socialapp.postservice.entity.Post;
@@ -34,10 +33,10 @@ public class PostController {
             @RequestParam("privacy") String privacy,
             @RequestParam("type") String type,
             @RequestPart(value = "media", required = false) MultipartFile[] mediaFiles) {
-                CreatePostResponse post = postService.createPost(userId, content, groupId, privacy,type,  mediaFiles);
-                return ResponseEntity.ok(post);
-            }
-    
+        CreatePostResponse post = postService.createPost(userId, content, groupId, privacy, type, mediaFiles);
+        return ResponseEntity.ok(post);
+    }
+
     @PostMapping("/like-post")
     public ResponseEntity<Post> likePost(@RequestBody LikePostRequest likePostRequest) {
         Post updatedPost = postService.handleLikePost(likePostRequest);
@@ -51,7 +50,7 @@ public class PostController {
     public ResponseEntity<PagedPostResponse> getPostDisplay(
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size,
-            @RequestParam String type){
+            @RequestParam String type) {
         PagedPostResponse pagedResponse = postService.getPostOnMainScreen(page, size, type);
         return ResponseEntity.ok().body(pagedResponse);
     }
@@ -77,9 +76,9 @@ public class PostController {
 
     @PutMapping("/update-post")
     public ResponseEntity<Post> updatePost(@RequestParam("postId") String postId,
-                                            @RequestParam(required = false) String content,
-                                            @RequestParam("privacy") String privacy,
-                                            @RequestPart(value = "media", required = false) MultipartFile[] mediaFiles) {
+            @RequestParam(required = false) String content,
+            @RequestParam("privacy") String privacy,
+            @RequestPart(value = "media", required = false) MultipartFile[] mediaFiles) {
         Post updatedPost = postService.updatePost(postId, content, privacy, mediaFiles);
         if (updatedPost == null) {
             throw new NotFoundException("Post not found");
@@ -115,7 +114,8 @@ public class PostController {
     }
 
     @GetMapping("/userlikes/{postId}")
-    public ResponseEntity<List<OneUserProfileResponse.UserProfileOne>> getUsersWhoLikedPost(@PathVariable String postId) {
+    public ResponseEntity<List<OneUserProfileResponse.UserProfileOne>> getUsersWhoLikedPost(
+            @PathVariable String postId) {
         List<OneUserProfileResponse.UserProfileOne> users = postService.getUserLikePost(postId);
         if (users == null) {
             throw new NotFoundException("Post not found");
@@ -137,5 +137,12 @@ public class PostController {
             throw new NotFoundException("Post not found");
         }
         return ResponseEntity.ok(users);
+    }
+
+    @GetMapping("/search")
+    public ResponseEntity<List<PostResponse>> searchPosts(
+            @RequestParam String keyword) {
+        List<PostResponse> posts = postService.searchPosts(keyword);
+        return ResponseEntity.ok(posts);
     }
 }
