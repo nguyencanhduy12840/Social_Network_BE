@@ -72,6 +72,10 @@ public interface UserProfileRepository extends Neo4jRepository<UserProfile, Stri
     @Query("""
             MATCH (u:user_profile)
             WHERE toLower(u.username) CONTAINS toLower($keyword)
+               OR toLower(u.firstName) CONTAINS toLower($keyword)
+               OR toLower(u.lastName) CONTAINS toLower($keyword)
+               OR toLower(u.firstName + ' ' + u.lastName) CONTAINS toLower($keyword)
+               OR toLower(u.lastName + ' ' + u.firstName) CONTAINS toLower($keyword)
             RETURN u
             """)
     List<UserProfile> searchByUsername(String keyword);
