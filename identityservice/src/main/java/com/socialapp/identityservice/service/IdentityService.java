@@ -21,8 +21,9 @@ public class IdentityService {
     private final IdentityRepository identityRepository;
     private final ProfileClient profileClient;
     private final PasswordEncoder passwordEncoder;
+
     public IdentityService(IdentityRepository identityRepository,
-                           IdentityConverter identityConverter, ProfileClient profileClient, PasswordEncoder passwordEncoder) {
+            IdentityConverter identityConverter, ProfileClient profileClient, PasswordEncoder passwordEncoder) {
         this.passwordEncoder = passwordEncoder;
         this.identityRepository = identityRepository;
         this.identityConverter = identityConverter;
@@ -35,9 +36,9 @@ public class IdentityService {
 
     public ResRegisterDTO register(ReqRegisterDTO reqRegisterDTO) {
         Identity identity = identityRepository.save(
-                identityConverter.convertToEntity(reqRegisterDTO)
-        );
-        ProfileCreationRequest profileCreationRequest = identityConverter.convertToProfileCreationRequest(reqRegisterDTO);
+                identityConverter.convertToEntity(reqRegisterDTO));
+        ProfileCreationRequest profileCreationRequest = identityConverter
+                .convertToProfileCreationRequest(reqRegisterDTO);
         profileCreationRequest.setUserId(identity.getId());
         profileClient.createProfile(profileCreationRequest);
         return identityConverter.convertToDto(identity);
@@ -45,15 +46,15 @@ public class IdentityService {
 
     public Identity findIdentityByEmail(String email) {
         Identity identity = this.identityRepository.findByEmail(email);
-        if(identity == null) {
+        if (identity == null) {
             throw new RuntimeException("Identity not found with email: " + email);
         }
         return identity;
     }
 
-    public void updateRefreshToken(String token, String email){
+    public void updateRefreshToken(String token, String email) {
         Identity identity = this.identityRepository.findByEmail(email);
-        if(identity != null){
+        if (identity != null) {
             identity.setRefreshToken(token);
             this.identityRepository.save(identity);
         }
@@ -61,17 +62,18 @@ public class IdentityService {
 
     /**
      * Handles Google authentication - creates new user or updates existing user
-     * @param googleId Google user ID (sub)
-     * @param email User email
-     * @param name User name
-     * @param pictureUrl Profile picture URL
+     * 
+     * @param googleId      Google user ID (sub)
+     * @param email         User email
+     * @param name          User name
+     * @param pictureUrl    Profile picture URL
      * @param emailVerified Whether email is verified by Google
      * @return Identity entity
      */
-    public Identity handleGoogleAuth(String googleId, String email, String name, 
-                                       String pictureUrl, boolean emailVerified) {
+    public Identity handleGoogleAuth(String googleId, String email, String name,
+            String pictureUrl, boolean emailVerified) {
         Identity identity = identityRepository.findByEmail(email);
-        
+
         if (identity != null) {
             // User exists - update Google ID if not set and last login
             if (identity.getGoogleId() == null || identity.getGoogleId().isEmpty()) {
@@ -81,7 +83,7 @@ public class IdentityService {
             identity.setAvatarUrl(pictureUrl);
             identity.setLastLogin(LocalDateTime.now());
             identity.setEmailVerified(emailVerified);
-            
+
             return identityRepository.save(identity);
         } else {
             // Create new user with Google auth
@@ -93,27 +95,27 @@ public class IdentityService {
             newIdentity.setEmailVerified(emailVerified);
             newIdentity.setLastLogin(LocalDateTime.now());
             newIdentity.setPassword(null); // No password for OAuth users
-            
+
             Identity savedIdentity = identityRepository.save(newIdentity);
-            
+
             // Create profile in profile service
             ProfileCreationRequest profileCreationRequest = new ProfileCreationRequest();
             profileCreationRequest.setUserId(savedIdentity.getId());
             profileCreationRequest.setEmail(email);
-            
+
             // Extract username from email or name
-            String username = name != null && !name.isEmpty() 
-                ? name.replaceAll("\\s+", "").toLowerCase() 
-                : email.split("@")[0];
+            String username = name != null && !name.isEmpty()
+                    ? name.replaceAll("\\s+", "").toLowerCase()
+                    : email.split("@")[0];
             profileCreationRequest.setUsername(username);
-            
+
             try {
                 profileClient.createProfile(profileCreationRequest);
             } catch (Exception e) {
                 // Log error but don't fail authentication if profile creation fails
                 System.err.println("Failed to create profile for Google user: " + e.getMessage());
             }
-            
+
             return savedIdentity;
         }
     }
@@ -124,7 +126,7 @@ public class IdentityService {
 
     public String forgotPassword(String email) {
         Identity identity = this.identityRepository.findByEmail(email);
-        if(identity != null){
+        if (identity != null) {
             String newPassword = randomPassword();
             String hashedPassword = passwordEncoder.encode(newPassword);
             identity.setPassword(hashedPassword);
@@ -134,7 +136,7 @@ public class IdentityService {
         return null;
     }
 
-    public String randomPassword(){
+    public String randomPassword() {
         Random random = new Random();
         StringBuilder result = new StringBuilder();
         for (int i = 0; i < 6; i++) {
@@ -146,12 +148,11 @@ public class IdentityService {
 
     public Identity changePassword(ResetPasswordRequest resetPasswordRequest) {
         Identity identity = this.findIdentityByEmail(resetPasswordRequest.getEmail());
-        if(!this.passwordEncoder.matches(resetPasswordRequest.getCurrentPassword(), identity.getPassword())){
-            return null;
+        if (!this.passwordEncoder.matches(resetPasswordRequest.getCurrentPassword(), identity.getPassword())) {
+            throw new RuntimeException("Current password is incorrect");
         }
         String hashedPassword = passwordEncoder.encode(resetPasswordRequest.getNewPassword());
         identity.setPassword(hashedPassword);
         return this.identityRepository.save(identity);
     }
 }
-

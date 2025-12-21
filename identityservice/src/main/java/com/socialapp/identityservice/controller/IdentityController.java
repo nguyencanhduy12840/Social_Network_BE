@@ -41,11 +41,11 @@ public class IdentityController {
 
     @Value("${social.jwt.refresh-token-validity-in-seconds}")
     private long refreshTokenExpiration;
-    
+
     public IdentityController(IdentityService identityService, PasswordEncoder passwordEncoder,
-                              AuthenticationManagerBuilder authenticationManagerBuilder, 
-                              SecurityUtil securityUtil, GoogleAuthService googleAuthService,
-                              EmailService emailService) {
+            AuthenticationManagerBuilder authenticationManagerBuilder,
+            SecurityUtil securityUtil, GoogleAuthService googleAuthService,
+            EmailService emailService) {
         this.emailService = emailService;
         this.securityUtil = securityUtil;
         this.authenticationManagerBuilder = authenticationManagerBuilder;
@@ -55,8 +55,8 @@ public class IdentityController {
     }
 
     @PostMapping("/register")
-    public ResponseEntity<ResRegisterDTO> register(@RequestBody @Valid ReqRegisterDTO registerDTO){
-        if(identityService.isEmailExist(registerDTO.getEmail())){
+    public ResponseEntity<ResRegisterDTO> register(@RequestBody @Valid ReqRegisterDTO registerDTO) {
+        if (identityService.isEmailExist(registerDTO.getEmail())) {
             throw new ExistException("Email already exist");
         }
         String passwordHash = passwordEncoder.encode(registerDTO.getPassword());
@@ -66,7 +66,7 @@ public class IdentityController {
     }
 
     @PostMapping("/login")
-    public ResponseEntity<ResLoginDTO> login(@RequestBody @Valid ReqLoginDTO loginDTO){
+    public ResponseEntity<ResLoginDTO> login(@RequestBody @Valid ReqLoginDTO loginDTO) {
         // Nạp input gồm username/password vào Security
         UsernamePasswordAuthenticationToken authenticationToken = new UsernamePasswordAuthenticationToken(
                 loginDTO.getEmail(), loginDTO.getPassword());
@@ -102,38 +102,38 @@ public class IdentityController {
     public ResponseEntity<ResLoginDTO> googleLogin(@RequestBody @Valid GoogleLoginRequest request) {
         try {
             log.info("Processing Google login request");
-            
+
             // Verify Google ID token
             GoogleIdToken.Payload payload = googleAuthService.verifyGoogleToken(request.getIdToken());
-            
+
             // Extract user information from Google
             String googleId = googleAuthService.getGoogleId(payload);
             String email = googleAuthService.getEmail(payload);
             String name = googleAuthService.getName(payload);
             String pictureUrl = googleAuthService.getPictureUrl(payload);
             boolean emailVerified = googleAuthService.isEmailVerified(payload);
-            
+
             log.info("Google token verified for email: {}", email);
-            
+
             // Handle user creation or login
             Identity identity = identityService.handleGoogleAuth(googleId, email, name, pictureUrl, emailVerified);
-            
+
             // Build response
             ResLoginDTO res = ResLoginDTO.builder()
                     .id(identity.getId())
                     .email(identity.getEmail())
                     .build();
-            
+
             // Generate JWT tokens
             String accessToken = securityUtil.createAccessToken(identity.getEmail(), res);
             String refreshToken = securityUtil.createRefreshToken(identity.getEmail(), res);
-            
+
             res.setAccessToken(accessToken);
             res.setRefreshToken(refreshToken);
-            
+
             // Update refresh token in database
             identityService.updateRefreshToken(refreshToken, identity.getEmail());
-            
+
             // Set refresh token cookie
             ResponseCookie responseCookie = ResponseCookie.from("refresh_token", refreshToken)
                     .httpOnly(true)
@@ -141,13 +141,13 @@ public class IdentityController {
                     .path("/")
                     .maxAge(refreshTokenExpiration)
                     .build();
-            
+
             log.info("Google login successful for user: {}", email);
-            
+
             return ResponseEntity.ok()
                     .header(HttpHeaders.SET_COOKIE, responseCookie.toString())
                     .body(res);
-                    
+
         } catch (IllegalArgumentException e) {
             log.error("Invalid Google token: {}", e.getMessage());
             throw new GoogleAuthException("Invalid ID token");
@@ -158,7 +158,7 @@ public class IdentityController {
     }
 
     @PostMapping("/validate")
-    public ValidateResponse validateToken(@RequestBody ValidateRequest request){
+    public ValidateResponse validateToken(@RequestBody ValidateRequest request) {
         log.info("Validate token: {}", request.getToken());
         var result = securityUtil.validateToken(request);
         log.info("Token at controller identityservice: {}", result.isValid());
@@ -166,7 +166,7 @@ public class IdentityController {
     }
 
     @PostMapping("/refresh-token")
-    public ResponseEntity<String> refreshToken(@RequestBody RefreshTokenRequest refreshToken){
+    public ResponseEntity<String> refreshToken(@RequestBody RefreshTokenRequest refreshToken) {
         String response = this.securityUtil.refreshAccessToken(refreshToken);
         return ResponseEntity.ok().body(response);
     }
@@ -193,8 +193,11 @@ public class IdentityController {
 
     @PutMapping("/reset-password")
     public ResponseEntity<String> resetPassword(@RequestBody ResetPasswordRequest request) {
-        this.identityService.changePassword(request);
-        return ResponseEntity.ok().body("Password has been reset successfully");
+        try {
+            this.identityService.changePassword(request);
+            return ResponseEntity.ok().body("Password has been reset successfully");
+        } catch (RuntimeException e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
+        }
     }
-
 }
